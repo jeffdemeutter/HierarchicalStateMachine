@@ -3,11 +3,20 @@
   <ItemGroup>
     <ClCompile Include="Plugin.cpp" />
     <ClCompile Include="stdafx.cpp" />
-    <ClCompile Include="SteeringBehaviours.cpp" />
+    <ClCompile Include="SteeringBehaviours.cpp">
+      <Filter>SteeringBehaviour</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Plugin.h" />
     <ClInclude Include="stdafx.h" />
-    <ClInclude Include="SteeringBehaviours.h" />
+    <ClInclude Include="SteeringBehaviours.h">
+      <Filter>SteeringBehaviour</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <Filter Include="SteeringBehaviour">
+      <UniqueIdentifier>{1896fa44-93a4-4443-8522-c3b1228f857a}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
 </Project>

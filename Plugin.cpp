@@ -25,7 +25,7 @@ void Plugin::Initialize(IBaseInterface* pInterface, PluginInfo& info)
 void Plugin::DllInit()
 {
 	//Called when the plugin is loaded
-	m_pSteeringBehaviour = new Seek();
+	m_pSteeringBehaviour = new Wander();
 }
 
 //Called only once
@@ -145,14 +145,11 @@ SteeringPlugin_Output Plugin::UpdateSteering(float dt)
 	}
 
 
-	//Simple Seek Behaviour (towards Target)
-	m_pSteeringBehaviour->CalculateSteering(dt, agentInfo);
+	// Wander Behaviour
+	m_pSteeringBehaviour->SetTarget(nextTargetPos);
+	steering = m_pSteeringBehaviour->CalculateSteering(dt, agentInfo);
 
 
-	if (Distance(nextTargetPos, agentInfo.Position) < 2.f)
-	{
-		steering.LinearVelocity = Elite::ZeroVector2;
-	}
 
 	//steering.AngularVelocity = m_AngSpeed; //Rotate your character to inspect the world while walking
 	steering.AutoOrient = true; //Setting AutoOrientate to TRue overrides the AngularVelocity

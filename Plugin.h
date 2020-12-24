@@ -38,6 +38,7 @@ private:
 	float m_AngSpeed = 0.f; //Demo purpose
 };
 
+
 //ENTRY
 //This is the first function that is called by the host program
 //The plugin returned by this function is also the plugin used by the host program
