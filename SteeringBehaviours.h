@@ -43,7 +43,7 @@ public:
 //////////////////////////
 //WANDER
 //******
-class Wander : public Seek
+class Wander final : public Seek
 {
 public:
 	Wander() = default;
@@ -65,7 +65,7 @@ protected:
 ///////////////////////////////////////
 //FLEE
 //****
-class Flee : public Seek
+class Flee final : public Seek
 {
 public:
 	Flee() = default;
@@ -76,6 +76,5 @@ public:
 	void SetFleeRadius(float radius) { m_FleeRadius = radius; }
 
 protected:
-	const TargetData* m_pTargetRef = nullptr;
-	float m_FleeRadius = 30.f;
+	float m_FleeRadius = 10.f;
 };

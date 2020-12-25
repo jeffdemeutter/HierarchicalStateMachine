@@ -6,6 +6,12 @@
     <ClCompile Include="SteeringBehaviours.cpp">
       <Filter>SteeringBehaviour</Filter>
     </ClCompile>
+    <ClCompile Include="EBehaviorTree.cpp">
+      <Filter>BehaviourTree</Filter>
+    </ClCompile>
+    <ClCompile Include="SteeringAgent.cpp">
+      <Filter>SteeringBehaviour</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Plugin.h" />
@@ -13,10 +19,25 @@
     <ClInclude Include="SteeringBehaviours.h">
       <Filter>SteeringBehaviour</Filter>
     </ClInclude>
+    <ClInclude Include="Behaviors.h">
+      <Filter>BehaviourTree</Filter>
+    </ClInclude>
+    <ClInclude Include="EBehaviorTree.h">
+      <Filter>BehaviourTree</Filter>
+    </ClInclude>
+    <ClInclude Include="EBlackboard.h">
+      <Filter>BehaviourTree</Filter>
+    </ClInclude>
+    <ClInclude Include="SteeringAgent.h">
+      <Filter>SteeringBehaviour</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="SteeringBehaviour">
       <UniqueIdentifier>{1896fa44-93a4-4443-8522-c3b1228f857a}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="BehaviourTree">
+      <UniqueIdentifier>{f63d18d1-7c70-47b4-a97d-fc63b6ef65ef}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
 </Project>

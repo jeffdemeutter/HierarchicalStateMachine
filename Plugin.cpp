@@ -3,7 +3,6 @@
 #include "IExamInterface.h"
 
 
-
 using namespace Elite;
 
 //Called only once, during initialization
@@ -19,14 +18,36 @@ void Plugin::Initialize(IBaseInterface* pInterface, PluginInfo& info)
 	info.Student_FirstName = "Jeff";
 	info.Student_LastName = "De Meutter";
 	info.Student_Class = "2DAE01";
+
+	// initialize
+	m_pSteeringAgent = new SteeringAgent();
+
+	// decisionmaking init
+	Blackboard* pBlackboard = new Blackboard();
+	pBlackboard->AddData("interface", m_pInterface);
+	pBlackboard->AddData("target", m_Target);
+	pBlackboard->AddData("agent", m_pSteeringAgent);
+
+	BehaviorTree* pBehaviourTree = new BehaviorTree(pBlackboard,
+		new BehaviorSelector(
+			{
+				new BehaviorSequence(
+					{
+						new BehaviorConditional(HouseFound),
+						new BehaviorAction(ChangeToSeek)
+					}),
+				new BehaviorAction(ChangeToWander)
+			})
+	);
+
+	m_pSteeringAgent->SetDecisionMaking(pBehaviourTree);
 }
 
 //Called only once
 void Plugin::DllInit()
 {
 	//Called when the plugin is loaded
-	m_pSteeringBehaviour = new Wander();
-}
+};
 
 //Called only once
 void Plugin::DllShutdown()
@@ -52,49 +73,47 @@ void Plugin::Update(float dt)
 {
 	//Demo Event Code
 	//In the end your AI should be able to walk around without external input
-	if (m_pInterface->Input_IsMouseButtonUp(Elite::InputMouseButton::eLeft))
-	{
-		//Update target based on input
-		Elite::MouseData mouseData = m_pInterface->Input_GetMouseData(Elite::InputType::eMouseButton, Elite::InputMouseButton::eLeft);
-		const Elite::Vector2 pos = Elite::Vector2(static_cast<float>(mouseData.X), static_cast<float>(mouseData.Y));
-		m_Target = m_pInterface->Debug_ConvertScreenToWorld(pos);
-	}
-	else if (m_pInterface->Input_IsKeyboardKeyDown(Elite::eScancode_Space))
-	{
-		m_CanRun = true;
-	}
-	else if (m_pInterface->Input_IsKeyboardKeyDown(Elite::eScancode_Left))
-	{
-		m_AngSpeed -= Elite::ToRadians(10);
-	}
-	else if (m_pInterface->Input_IsKeyboardKeyDown(Elite::eScancode_Right))
-	{
-		m_AngSpeed += Elite::ToRadians(10);
-	}
-	else if (m_pInterface->Input_IsKeyboardKeyDown(Elite::eScancode_G))
-	{
-		m_GrabItem = true;
-	}
-	else if (m_pInterface->Input_IsKeyboardKeyDown(Elite::eScancode_U))
-	{
-		m_UseItem = true;
-	}
-	else if (m_pInterface->Input_IsKeyboardKeyDown(Elite::eScancode_R))
-	{
-		m_RemoveItem = true;
-	}
-	else if (m_pInterface->Input_IsKeyboardKeyUp(Elite::eScancode_Space))
-	{
-		m_CanRun = false;
-	}
+	//if (m_pInterface->Input_IsMouseButtonUp(Elite::InputMouseButton::eLeft))
+	//{
+	//	//Update target based on input
+	//	Elite::MouseData mouseData = m_pInterface->Input_GetMouseData(Elite::InputType::eMouseButton, Elite::InputMouseButton::eLeft);
+	//	const Elite::Vector2 pos = Elite::Vector2(static_cast<float>(mouseData.X), static_cast<float>(mouseData.Y));
+	//	m_Target = m_pInterface->Debug_ConvertScreenToWorld(pos);
+	//}
+	//else if (m_pInterface->Input_IsKeyboardKeyDown(Elite::eScancode_Space))
+	//{
+	//	m_CanRun = true;
+	//}
+	//else if (m_pInterface->Input_IsKeyboardKeyDown(Elite::eScancode_Left))
+	//{
+	//	m_AngSpeed -= Elite::ToRadians(10);
+	//}
+	//else if (m_pInterface->Input_IsKeyboardKeyDown(Elite::eScancode_Right))
+	//{
+	//	m_AngSpeed += Elite::ToRadians(10);
+	//}
+	//else if (m_pInterface->Input_IsKeyboardKeyDown(Elite::eScancode_G))
+	//{
+	//	m_GrabItem = true;
+	//}
+	//else if (m_pInterface->Input_IsKeyboardKeyDown(Elite::eScancode_U))
+	//{
+	//	m_UseItem = true;
+	//}
+	//else if (m_pInterface->Input_IsKeyboardKeyDown(Elite::eScancode_R))
+	//{
+	//	m_RemoveItem = true;
+	//}
+	//else if (m_pInterface->Input_IsKeyboardKeyUp(Elite::eScancode_Space))
+	//{
+	//	m_CanRun = false;
+	//}
 }
 
 //Update
 //This function calculates the new SteeringOutput, called once per frame
 SteeringPlugin_Output Plugin::UpdateSteering(float dt)
 {
-	auto steering = SteeringPlugin_Output();
-
 	//Use the Interface (IAssignmentInterface) to 'interface' with the AI_Framework
 	auto agentInfo = m_pInterface->Agent_GetInfo();
 
@@ -117,51 +136,36 @@ SteeringPlugin_Output Plugin::UpdateSteering(float dt)
 	//INVENTORY USAGE DEMO
 	//********************
 
-	if (m_GrabItem)
-	{
-		ItemInfo item;
-		//Item_Grab > When DebugParams.AutoGrabClosestItem is TRUE, the Item_Grab function returns the closest item in range
-		//Keep in mind that DebugParams are only used for debugging purposes, by default this flag is FALSE
-		//Otherwise, use GetEntitiesInFOV() to retrieve a vector of all entities in the FOV (EntityInfo)
-		//Item_Grab gives you the ItemInfo back, based on the passed EntityHash (retrieved by GetEntitiesInFOV)
-		if (m_pInterface->Item_Grab({}, item))
-		{
-			//Once grabbed, you can add it to a specific inventory slot
-			//Slot must be empty
-			m_pInterface->Inventory_AddItem(0, item);
-		}
-	}
+	//if (m_GrabItem)
+	//{
+	//	ItemInfo item;
+	//	//Item_Grab > When DebugParams.AutoGrabClosestItem is TRUE, the Item_Grab function returns the closest item in range
+	//	//Keep in mind that DebugParams are only used for debugging purposes, by default this flag is FALSE
+	//	//Otherwise, use GetEntitiesInFOV() to retrieve a vector of all entities in the FOV (EntityInfo)
+	//	//Item_Grab gives you the ItemInfo back, based on the passed EntityHash (retrieved by GetEntitiesInFOV)
+	//	if (m_pInterface->Item_Grab({}, item))
+	//	{
+	//		//Once grabbed, you can add it to a specific inventory slot
+	//		//Slot must be empty
+	//		m_pInterface->Inventory_AddItem(0, item);
+	//	}
+	//}
 
-	if (m_UseItem)
-	{
-		//Use an item (make sure there is an item at the given inventory slot)
-		m_pInterface->Inventory_UseItem(0);
-	}
+	//if (m_UseItem)
+	//{
+	//	//Use an item (make sure there is an item at the given inventory slot)
+	//	m_pInterface->Inventory_UseItem(0);
+	//}
 
-	if (m_RemoveItem)
-	{
-		//Remove an item from a inventory slot
-		m_pInterface->Inventory_RemoveItem(0);
-	}
+	//if (m_RemoveItem)
+	//{
+	//	//Remove an item from a inventory slot
+	//	m_pInterface->Inventory_RemoveItem(0);
+	//}
 
 
 	// Wander Behaviour
-	m_pSteeringBehaviour->SetTarget(nextTargetPos);
-	steering = m_pSteeringBehaviour->CalculateSteering(dt, agentInfo);
-
-
-
-	//steering.AngularVelocity = m_AngSpeed; //Rotate your character to inspect the world while walking
-	steering.AutoOrient = true; //Setting AutoOrientate to TRue overrides the AngularVelocity
-
-	steering.RunMode = m_CanRun; //If RunMode is True > MaxLinSpd is increased for a limited time (till your stamina runs out)
-
-								 //SteeringPlugin_Output is works the exact same way a SteeringBehaviour output
-
-								 //@End (Demo Purposes)
-	m_GrabItem = false; //Reset State
-	m_UseItem = false;
-	m_RemoveItem = false;
+	SteeringPlugin_Output steering = m_pSteeringAgent->Update(dt, m_pInterface->Agent_GetInfo());
 
 	return steering;
 }

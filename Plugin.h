@@ -1,7 +1,10 @@
 #pragma once
 #include "IExamPlugin.h"
 #include "Exam_HelperStructs.h"
-#include "SteeringBehaviours.h"
+
+#include "SteeringAgent.h"
+#include "EBehaviorTree.h"
+#include "Behaviors.h"
 
 class IBaseInterface;
 class IExamInterface;
@@ -28,14 +31,11 @@ private:
 	vector<HouseInfo> GetHousesInFOV() const;
 	vector<EntityInfo> GetEntitiesInFOV() const;
 
-	SteeringBehavior* m_pSteeringBehaviour = nullptr;
+	SteeringAgent* m_pSteeringAgent = nullptr;
+	BehaviorTree* m_pDecisionMaking = nullptr;
 
+	// demo stuff
 	Elite::Vector2 m_Target = {};
-	bool m_CanRun = false; //Demo purpose
-	bool m_GrabItem = false; //Demo purpose
-	bool m_UseItem = false; //Demo purpose
-	bool m_RemoveItem = false; //Demo purpose
-	float m_AngSpeed = 0.f; //Demo purpose
 };
 
 
