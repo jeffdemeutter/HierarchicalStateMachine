@@ -22,25 +22,75 @@ void Plugin::Initialize(IBaseInterface* pInterface, PluginInfo& info)
 	// initialize
 	m_pSteeringAgent = new SteeringAgent();
 
+	// ===================================================================
 	// decisionmaking init
 	Blackboard* pBlackboard = new Blackboard();
 	pBlackboard->AddData("interface", m_pInterface);
-	pBlackboard->AddData("target", m_Target);
-	pBlackboard->AddData("agent", m_pSteeringAgent);
+	pBlackboard->AddData("agent"	, m_pSteeringAgent);
+	pBlackboard->AddData("target"	, m_Target);
+	pBlackboard->AddData("house"	, HouseInfo{});
+	pBlackboard->AddData("entity"	, EntityInfo{});
 
-	BehaviorTree* pBehaviourTree = new BehaviorTree(pBlackboard,
-		new BehaviorSelector(
-			{
-				new BehaviorSequence(
-					{
-						new BehaviorConditional(HouseFound),
-						new BehaviorAction(ChangeToSeek)
-					}),
-				new BehaviorAction(ChangeToWander)
-			})
-	);
+	// ===================================================================
+	// Create states
+	EnterHouse*		pEnterHouse		= new EnterHouse();
+	WanderState*	pWanderState	= new WanderState();
+	PickUpItem*		pPickupItem		= new PickUpItem();
+	EscapeHouse*	pEscapeHouse	= new EscapeHouse();
+	ReturnToMap*	pReturnToMap	= new ReturnToMap();
+	
+	m_pStates.push_back(pEnterHouse);
+	m_pStates.push_back(pWanderState);
+	m_pStates.push_back(pPickupItem);
+	m_pStates.push_back(pEscapeHouse);
+	m_pStates.push_back(pReturnToMap);
 
-	m_pSteeringAgent->SetDecisionMaking(pBehaviourTree);
+	// ===================================================================
+	// Create transitions
+	HouseInFov*			pHouseInFov			= new HouseInFov();
+	ItemInFov*			pItemInFov			= new ItemInFov();
+	NoItemInFov*		pNoItemInFov		= new NoItemInFov();
+	VisitedHouse*		pVisitedHouse		= new VisitedHouse();
+	IsInVisitedHouse*	pIsInVisitedHouse	= new IsInVisitedHouse();
+	IsNotInHouse*		pIsNotInHouse		= new IsNotInHouse();
+	OutsideMap*			pOutsideMap			= new OutsideMap();
+	InsideMap*			pInsideMap			= new InsideMap();
+
+	m_pTransitions.push_back(pHouseInFov);
+	m_pTransitions.push_back(pItemInFov);
+	m_pTransitions.push_back(pNoItemInFov);
+	m_pTransitions.push_back(pVisitedHouse);
+	m_pTransitions.push_back(pVisitedHouse);
+	m_pTransitions.push_back(pIsInVisitedHouse);
+	m_pTransitions.push_back(pIsNotInHouse);
+	m_pTransitions.push_back(pOutsideMap);
+	m_pTransitions.push_back(pInsideMap);
+
+
+	// ===================================================================
+	// FSM
+	FiniteStateMachine* pFSM = new FiniteStateMachine(pWanderState, pBlackboard);
+
+	// Apply Transitions
+	pFSM->AddTransition(pWanderState, pEnterHouse	, pHouseInFov		);
+
+	//		pickup stuff
+	pFSM->AddTransition(pWanderState, pPickupItem	, pItemInFov		);
+	pFSM->AddTransition(pEnterHouse	, pPickupItem	, pItemInFov		);
+	pFSM->AddTransition(pEscapeHouse, pPickupItem	, pItemInFov		);
+	pFSM->AddTransition(pPickupItem	, pWanderState	, pNoItemInFov		);
+
+
+	pFSM->AddTransition(pEnterHouse	, pWanderState	, pVisitedHouse		);
+	pFSM->AddTransition(pWanderState, pEscapeHouse	, pIsInVisitedHouse	);
+	pFSM->AddTransition(pEscapeHouse, pWanderState	, pIsNotInHouse		);
+
+	pFSM->AddTransition(pReturnToMap, pWanderState	, pInsideMap		);
+	pFSM->AddTransition(pWanderState, pReturnToMap	, pOutsideMap		);
+
+
+	// set fsm
+	m_pSteeringAgent->SetDecisionMaking(pFSM);
 }
 
 //Called only once
@@ -63,7 +113,7 @@ void Plugin::InitGameDebugParams(GameDebugParams& params)
 	params.RenderUI = true; //Render the IMGUI Panel? (Default = true)
 	params.SpawnEnemies = false; //Do you want to spawn enemies? (Default = true)
 	params.EnemyCount = 20; //How many enemies? (Default = 20)
-	params.GodMode = false; //GodMode > You can't die, can be usefull to inspect certain behaviours (Default = false)
+	params.GodMode = true; //GodMode > You can't die, can be usefull to inspect certain behaviours (Default = false)
 	params.AutoGrabClosestItem = true; //A call to Item_Grab(...) returns the closest item that can be grabbed. (EntityInfo argument is ignored)
 }
 
@@ -165,9 +215,7 @@ SteeringPlugin_Output Plugin::UpdateSteering(float dt)
 
 
 	// Wander Behaviour
-	SteeringPlugin_Output steering = m_pSteeringAgent->Update(dt, m_pInterface->Agent_GetInfo());
-
-	return steering;
+	return m_pSteeringAgent->Update(dt, m_pInterface->Agent_GetInfo());
 }
 
 //This function should only be used for rendering debug elements

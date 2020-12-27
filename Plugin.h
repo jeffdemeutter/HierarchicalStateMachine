@@ -3,8 +3,8 @@
 #include "Exam_HelperStructs.h"
 
 #include "SteeringAgent.h"
-#include "EBehaviorTree.h"
-#include "Behaviors.h"
+#include "StatesAndTransitions.h"
+#include "EFiniteStateMachine.h"
 
 class IBaseInterface;
 class IExamInterface;
@@ -32,7 +32,9 @@ private:
 	vector<EntityInfo> GetEntitiesInFOV() const;
 
 	SteeringAgent* m_pSteeringAgent = nullptr;
-	BehaviorTree* m_pDecisionMaking = nullptr;
+
+	std::vector<Elite::FSMState*> m_pStates{};
+	std::vector<Elite::FSMTransition*> m_pTransitions{};
 
 	// demo stuff
 	Elite::Vector2 m_Target = {};
