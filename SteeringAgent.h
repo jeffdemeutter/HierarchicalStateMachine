@@ -26,8 +26,13 @@ public:
 	void SetToVisited(const HouseInfo& house);
 	bool CheckVisitedRecently(const HouseInfo& house);
 
+	float GetTimer() const;
+	void ResetTimer();
+	void CanRun(bool canRun);
+
 	void SetToWander();
 	void SetToSeek(const Vector2& seekTarget);
+	void SetToFlee(const Vector2& evadeTarget);
 private:
 	FiniteStateMachine* m_pDecisionMaking = nullptr;
 
@@ -35,12 +40,14 @@ private:
 	SteeringBehavior* m_pSteeringBehaviour = nullptr;
 
 	SteeringBehavior* m_pWander = nullptr;
-	SteeringBehavior* m_pSeek = nullptr;
+	SteeringBehavior* m_pSeek	= nullptr;
+	SteeringBehavior* m_pFlee	= nullptr;
 
 	// Utilities
-	bool m_IsEnteringHouse = false;
 	bool m_CanRun = false;	
 	float m_AngSpeed = 0.f;
+
+	float m_Timer = 0.f;
 
 	std::vector<House> m_Houses;
 };

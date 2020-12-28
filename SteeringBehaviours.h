@@ -57,8 +57,8 @@ public:
 
 protected:
 	float m_WalkDelta = 0.f;
-	const float m_DeltaMultiplier = 0.13f;
-	float m_Offset = 8.f;
+	const float m_DeltaMultiplier = 0.05f;
+	float m_Offset = 10.f;
 	float m_Radius = 4.f;
 };
 

@@ -30,6 +30,8 @@ void Plugin::Initialize(IBaseInterface* pInterface, PluginInfo& info)
 	pBlackboard->AddData("target"	, m_Target);
 	pBlackboard->AddData("house"	, HouseInfo{});
 	pBlackboard->AddData("entity"	, EntityInfo{});
+	pBlackboard->AddData("enemyVec"	, vector<EnemyInfo>{});
+	pBlackboard->AddData("timer"	, static_cast<float>(0.f));
 
 	// ===================================================================
 	// Create states
@@ -38,12 +40,14 @@ void Plugin::Initialize(IBaseInterface* pInterface, PluginInfo& info)
 	PickUpItem*		pPickupItem		= new PickUpItem();
 	EscapeHouse*	pEscapeHouse	= new EscapeHouse();
 	ReturnToMap*	pReturnToMap	= new ReturnToMap();
+	EvadeState*		pEvadeState		= new EvadeState();
 	
 	m_pStates.push_back(pEnterHouse);
 	m_pStates.push_back(pWanderState);
 	m_pStates.push_back(pPickupItem);
 	m_pStates.push_back(pEscapeHouse);
 	m_pStates.push_back(pReturnToMap);
+	m_pStates.push_back(pEvadeState);
 
 	// ===================================================================
 	// Create transitions
@@ -55,16 +59,21 @@ void Plugin::Initialize(IBaseInterface* pInterface, PluginInfo& info)
 	IsNotInHouse*		pIsNotInHouse		= new IsNotInHouse();
 	OutsideMap*			pOutsideMap			= new OutsideMap();
 	InsideMap*			pInsideMap			= new InsideMap();
+	EnemyInFov*			pEnemyInFov			= new EnemyInFov();
+	NoEnemyInFov*		pNoEnemyInFov		= new NoEnemyInFov();
+	Timer*				pTimer				= new Timer();
 
 	m_pTransitions.push_back(pHouseInFov);
 	m_pTransitions.push_back(pItemInFov);
 	m_pTransitions.push_back(pNoItemInFov);
 	m_pTransitions.push_back(pVisitedHouse);
-	m_pTransitions.push_back(pVisitedHouse);
 	m_pTransitions.push_back(pIsInVisitedHouse);
 	m_pTransitions.push_back(pIsNotInHouse);
 	m_pTransitions.push_back(pOutsideMap);
 	m_pTransitions.push_back(pInsideMap);
+	m_pTransitions.push_back(pEnemyInFov);
+	m_pTransitions.push_back(pNoEnemyInFov);
+	m_pTransitions.push_back(pTimer);
 
 
 	// ===================================================================
@@ -85,8 +94,18 @@ void Plugin::Initialize(IBaseInterface* pInterface, PluginInfo& info)
 	pFSM->AddTransition(pWanderState, pEscapeHouse	, pIsInVisitedHouse	);
 	pFSM->AddTransition(pEscapeHouse, pWanderState	, pIsNotInHouse		);
 
-	pFSM->AddTransition(pReturnToMap, pWanderState	, pInsideMap		);
 	pFSM->AddTransition(pWanderState, pReturnToMap	, pOutsideMap		);
+	pFSM->AddTransition(pReturnToMap, pWanderState	, pInsideMap		);
+
+	//		Evade stuff
+	pFSM->AddTransition(pWanderState, pEvadeState	, pEnemyInFov		);
+	pFSM->AddTransition(pEnterHouse	, pEvadeState	, pEnemyInFov		);
+	pFSM->AddTransition(pReturnToMap, pEvadeState	, pEnemyInFov		);
+	pFSM->AddTransition(pEscapeHouse, pEvadeState	, pEnemyInFov		);
+	pFSM->AddTransition(pEvadeState	, pWanderState	, pTimer			);
+
+	//		Using Utilities
+
 
 
 	// set fsm
@@ -111,9 +130,9 @@ void Plugin::InitGameDebugParams(GameDebugParams& params)
 {
 	params.AutoFollowCam = true; //Automatically follow the AI? (Default = true)
 	params.RenderUI = true; //Render the IMGUI Panel? (Default = true)
-	params.SpawnEnemies = false; //Do you want to spawn enemies? (Default = true)
+	params.SpawnEnemies = true; //Do you want to spawn enemies? (Default = true)
 	params.EnemyCount = 20; //How many enemies? (Default = 20)
-	params.GodMode = true; //GodMode > You can't die, can be usefull to inspect certain behaviours (Default = false)
+	params.GodMode = false; //GodMode > You can't die, can be usefull to inspect certain behaviours (Default = false)
 	params.AutoGrabClosestItem = true; //A call to Item_Grab(...) returns the closest item that can be grabbed. (EntityInfo argument is ignored)
 }
 

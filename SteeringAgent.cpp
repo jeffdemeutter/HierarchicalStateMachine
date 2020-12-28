@@ -5,12 +5,11 @@
 SteeringAgent::SteeringAgent()
 	: m_pWander{ new Wander() }
 	, m_pSeek{ new Seek() }
+	, m_pFlee{ new Flee() }
 {
 
 	SetToWander();
 
-	m_pWander = new Wander();
-	m_pSeek = new Seek();
 }
 
 SteeringAgent::~SteeringAgent()
@@ -18,11 +17,14 @@ SteeringAgent::~SteeringAgent()
 	SAFE_DELETE(m_pDecisionMaking);
 	SAFE_DELETE(m_pWander);
 	SAFE_DELETE(m_pSeek);
+	SAFE_DELETE(m_pFlee);
 	SAFE_DELETE(m_pSteeringBehaviour);
 }
 
 SteeringPlugin_Output SteeringAgent::Update(float deltaT, const AgentInfo& agent)
 {
+	m_Timer += deltaT;
+
 	// Decide which behaviour to use
 	if (m_pDecisionMaking)
 		m_pDecisionMaking->Update(deltaT);
@@ -64,6 +66,21 @@ bool SteeringAgent::CheckVisitedRecently(const HouseInfo& house)
 	return found->visited;
 }
 
+float SteeringAgent::GetTimer() const
+{
+	return m_Timer;
+}
+
+void SteeringAgent::ResetTimer()
+{
+	m_Timer = 0.f;
+}
+
+void SteeringAgent::CanRun(bool canRun)
+{
+	m_CanRun = canRun;
+}
+
 void SteeringAgent::SetToWander()
 {
 	m_pSteeringBehaviour = m_pWander;
@@ -73,4 +90,10 @@ void SteeringAgent::SetToSeek(const Vector2& seekTarget)
 {
 	m_pSteeringBehaviour = m_pSeek;
 	m_pSteeringBehaviour->SetTarget(seekTarget);
+}
+
+void SteeringAgent::SetToFlee(const Vector2& evadeTarget)
+{
+	m_pSteeringBehaviour = m_pFlee;
+	m_pSteeringBehaviour->SetTarget(evadeTarget);
 }

@@ -3,7 +3,8 @@
 #include "Exam_HelperStructs.h"
 
 #include "SteeringAgent.h"
-#include "StatesAndTransitions.h"
+#include "Transitions.h"
+#include "States.h"
 #include "EFiniteStateMachine.h"
 
 class IBaseInterface;

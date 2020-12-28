@@ -44,4 +44,3 @@ SteeringPlugin_Output Flee::CalculateSteering(float deltaT, const AgentInfo& age
 
 	return steering;
 }
-

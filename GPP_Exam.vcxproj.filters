@@ -12,6 +12,12 @@
     <ClCompile Include="EFiniteStateMachine.cpp">
       <Filter>fsm</Filter>
     </ClCompile>
+    <ClCompile Include="Transitions.cpp">
+      <Filter>fsm</Filter>
+    </ClCompile>
+    <ClCompile Include="States.cpp">
+      <Filter>fsm</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Plugin.h" />
@@ -25,7 +31,10 @@
     <ClInclude Include="EFiniteStateMachine.h">
       <Filter>fsm</Filter>
     </ClInclude>
-    <ClInclude Include="StatesAndTransitions.h">
+    <ClInclude Include="States.h">
+      <Filter>fsm</Filter>
+    </ClInclude>
+    <ClInclude Include="Transitions.h">
       <Filter>fsm</Filter>
     </ClInclude>
   </ItemGroup>
