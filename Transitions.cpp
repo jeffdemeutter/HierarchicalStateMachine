@@ -132,7 +132,7 @@ bool InsideMap::ToTransition(Blackboard* pBlackboard) const
 	WorldInfo map = pInterface->World_GetInfo();
 	Vector2 pos = pInterface->Agent_GetInfo().Position;
 	Abs(pos);
-	return ((pos.x < map.Dimensions.x / 2) && (pos.y < map.Dimensions.y / 2));
+	return ((pos.x < map.Dimensions.x / 3) && (pos.y < map.Dimensions.y / 3));
 }
 
 bool EnemyInFov::ToTransition(Blackboard* pBlackboard) const
@@ -143,30 +143,24 @@ bool EnemyInFov::ToTransition(Blackboard* pBlackboard) const
 	if (!pBlackboard->GetData("interface", pInterface)) return false;
 	if (!pAgent || !pInterface) return false;
 
-	bool found{ false };
 	EntityInfo entityInfo;
-	vector<EnemyInfo> enemyVec;
 	for (int i = 0;; ++i)
 	{
 		// if no entity is found, break
 		if (!pInterface->Fov_GetEntityByIndex(i, entityInfo))
 			break;
 
-		// if entity is not an item go to next entity
+		// if entity is not an enemy go to next entity
 		if (entityInfo.Type != eEntityType::ENEMY)
 			continue;
 
 		EnemyInfo enemyInfo{};
 		pInterface->Enemy_GetInfo(entityInfo, enemyInfo);
-		
-		enemyVec.push_back(enemyInfo);
-		found = true;
-	}
-	pBlackboard->ChangeData("enemyVec", enemyVec);
-	pBlackboard->ChangeData("timer", 1.5f);
-	pAgent->ResetTimer();
 
-	return found;
+		pBlackboard->ChangeData("timer", 0.5f);
+		pAgent->ResetTimer();
+		return true;
+	}
 }
 
 bool NoEnemyInFov::ToTransition(Blackboard* pBlackboard) const
@@ -194,10 +188,92 @@ bool Timer::ToTransition(Blackboard* pBlackboard) const
 
 bool HasToEat::ToTransition(Blackboard* pBlackboard) const
 {
+	IExamInterface* pInterface = nullptr;
+	if (!pBlackboard->GetData("interface", pInterface)) return false;
+
+	ItemInfo itemInfo{};
+	if (pInterface->Inventory_GetItem(3, itemInfo))
+		if (10.f - pInterface->Agent_GetInfo().Energy > pInterface->Food_GetEnergy(itemInfo))
+			return true;
+	
+	return false;
+} 
+
+bool WasHit::ToTransition(Blackboard* pBlackboard) const
+{
 	SteeringAgent* pAgent = nullptr;
 	IExamInterface* pInterface = nullptr;
 	if (!pBlackboard->GetData("agent", pAgent)) return false;
 	if (!pBlackboard->GetData("interface", pInterface)) return false;
 
-	if (pInterface->Agent_GetInfo().Energy );
-} 
+	if (pInterface->Agent_GetInfo().WasBitten)
+	{
+		pBlackboard->ChangeData("timer", 3.f);
+		pAgent->ResetTimer();
+
+		return true;
+	}
+	return false;
+}
+
+bool HasToHeal::ToTransition(Blackboard* pBlackboard) const
+{
+	IExamInterface* pInterface = nullptr;
+	if (!pBlackboard->GetData("interface", pInterface)) return false;
+
+	ItemInfo itemInfo{};
+	if (pInterface->Inventory_GetItem(2, itemInfo))
+		if (10.f - pInterface->Agent_GetInfo().Health > pInterface->Medkit_GetHealth(itemInfo))
+			return true;
+
+	return false;
+}
+
+bool GotKill::ToTransition(Blackboard* pBlackboard) const
+{
+	IExamInterface* pInterface = nullptr;
+	if (!pBlackboard->GetData("interface", pInterface)) return false;
+	int kills = 0;
+	pBlackboard->GetData("kills", kills);
+
+	if (pInterface->World_GetStats().NumEnemiesKilled != kills);
+	{
+		pBlackboard->ChangeData("kills", pInterface->World_GetStats().NumEnemiesKilled);
+		return true;
+	}
+	return false;
+}
+
+bool HasNoBullets::ToTransition(Blackboard* pBlackboard) const
+{
+	IExamInterface* pInterface = nullptr;
+	if (!pBlackboard->GetData("interface", pInterface)) return false;
+
+	//check for the first gun
+	ItemInfo itemInfo{};
+	int bullets{ 0 };
+	if (!pInterface->Inventory_GetItem(0, itemInfo))
+		bullets += pInterface->Weapon_GetAmmo(itemInfo);
+	// check for the second gun
+	if (pInterface->Inventory_GetItem(1, itemInfo))
+		bullets += pInterface->Weapon_GetAmmo(itemInfo);
+
+	return (bullets < 3);
+}
+
+bool HasBullets::ToTransition(Blackboard* pBlackboard) const
+{
+	IExamInterface* pInterface = nullptr;
+	if (!pBlackboard->GetData("interface", pInterface)) return false;
+
+	//check for the first gun
+	ItemInfo itemInfo{};
+	int bullets{ 0 };
+	if (!pInterface->Inventory_GetItem(0, itemInfo))
+		bullets += pInterface->Weapon_GetAmmo(itemInfo);
+	// check for the second gun
+	if (pInterface->Inventory_GetItem(1, itemInfo))
+		bullets += pInterface->Weapon_GetAmmo(itemInfo);
+
+	return (bullets > 3);
+}

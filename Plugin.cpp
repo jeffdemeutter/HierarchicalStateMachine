@@ -32,6 +32,8 @@ void Plugin::Initialize(IBaseInterface* pInterface, PluginInfo& info)
 	pBlackboard->AddData("entity"	, EntityInfo{});
 	pBlackboard->AddData("enemyVec"	, vector<EnemyInfo>{});
 	pBlackboard->AddData("timer"	, static_cast<float>(0.f));
+	pBlackboard->AddData("kills"	, static_cast<int>(0));
+	pBlackboard->AddData("distance"	, 5.f);
 
 	// ===================================================================
 	// Create states
@@ -41,6 +43,11 @@ void Plugin::Initialize(IBaseInterface* pInterface, PluginInfo& info)
 	EscapeHouse*	pEscapeHouse	= new EscapeHouse();
 	ReturnToMap*	pReturnToMap	= new ReturnToMap();
 	EvadeState*		pEvadeState		= new EvadeState();
+	Eat*			pEat			= new Eat();
+	RunAway*		pRunAway		= new RunAway();
+	Heal*			pHeal			= new Heal();
+	Shoot*			pShoot			= new Shoot();
+	FSMState*		pShootOrEvade	= new FSMState();
 	
 	m_pStates.push_back(pEnterHouse);
 	m_pStates.push_back(pWanderState);
@@ -48,6 +55,11 @@ void Plugin::Initialize(IBaseInterface* pInterface, PluginInfo& info)
 	m_pStates.push_back(pEscapeHouse);
 	m_pStates.push_back(pReturnToMap);
 	m_pStates.push_back(pEvadeState);
+	m_pStates.push_back(pEat);
+	m_pStates.push_back(pRunAway);
+	m_pStates.push_back(pHeal);
+	m_pStates.push_back(pShoot);
+	m_pStates.push_back(pShootOrEvade);
 
 	// ===================================================================
 	// Create transitions
@@ -62,6 +74,13 @@ void Plugin::Initialize(IBaseInterface* pInterface, PluginInfo& info)
 	EnemyInFov*			pEnemyInFov			= new EnemyInFov();
 	NoEnemyInFov*		pNoEnemyInFov		= new NoEnemyInFov();
 	Timer*				pTimer				= new Timer();
+	Play1Frame*			pPlay1Frame			= new Play1Frame();
+	HasToEat*			pHasToEat			= new HasToEat();
+	WasHit*				pWasHit				= new WasHit();
+	HasToHeal*			pHasToHeal			= new HasToHeal();
+	GotKill*			pGotKill			= new GotKill();
+	HasNoBullets*		pHasNoBullets		= new HasNoBullets();
+	HasBullets*			pHasBullets			= new HasBullets();
 
 	m_pTransitions.push_back(pHouseInFov);
 	m_pTransitions.push_back(pItemInFov);
@@ -74,6 +93,13 @@ void Plugin::Initialize(IBaseInterface* pInterface, PluginInfo& info)
 	m_pTransitions.push_back(pEnemyInFov);
 	m_pTransitions.push_back(pNoEnemyInFov);
 	m_pTransitions.push_back(pTimer);
+	m_pTransitions.push_back(pPlay1Frame);
+	m_pTransitions.push_back(pHasToEat);
+	m_pTransitions.push_back(pWasHit);
+	m_pTransitions.push_back(pHasToHeal);
+	m_pTransitions.push_back(pHasNoBullets);
+	m_pTransitions.push_back(pGotKill);
+	m_pTransitions.push_back(pHasBullets);
 
 
 	// ===================================================================
@@ -81,30 +107,49 @@ void Plugin::Initialize(IBaseInterface* pInterface, PluginInfo& info)
 	FiniteStateMachine* pFSM = new FiniteStateMachine(pWanderState, pBlackboard);
 
 	// Apply Transitions
-	pFSM->AddTransition(pWanderState, pEnterHouse	, pHouseInFov		);
+	pFSM->AddTransition(pWanderState	, pEnterHouse	, pHouseInFov		);
 
 	//		pickup stuff
-	pFSM->AddTransition(pWanderState, pPickupItem	, pItemInFov		);
-	pFSM->AddTransition(pEnterHouse	, pPickupItem	, pItemInFov		);
-	pFSM->AddTransition(pEscapeHouse, pPickupItem	, pItemInFov		);
-	pFSM->AddTransition(pPickupItem	, pWanderState	, pNoItemInFov		);
+	pFSM->AddTransition(pWanderState	, pPickupItem	, pItemInFov		);
+	pFSM->AddTransition(pEnterHouse		, pPickupItem	, pItemInFov		);
+	pFSM->AddTransition(pEscapeHouse	, pPickupItem	, pItemInFov		);
+	pFSM->AddTransition(pPickupItem		, pWanderState	, pNoItemInFov		);
+
+	pFSM->AddTransition(pEnterHouse		, pWanderState	, pVisitedHouse		);
+	pFSM->AddTransition(pWanderState	, pEscapeHouse	, pIsInVisitedHouse	);
+	pFSM->AddTransition(pEscapeHouse	, pWanderState	, pIsNotInHouse		);
+
+	pFSM->AddTransition(pWanderState	, pReturnToMap	, pOutsideMap		);
+	pFSM->AddTransition(pReturnToMap	, pWanderState	, pInsideMap		);
 
 
-	pFSM->AddTransition(pEnterHouse	, pWanderState	, pVisitedHouse		);
-	pFSM->AddTransition(pWanderState, pEscapeHouse	, pIsInVisitedHouse	);
-	pFSM->AddTransition(pEscapeHouse, pWanderState	, pIsNotInHouse		);
+	//		choose from evade or kill
+	pFSM->AddTransition(pWanderState	, pShootOrEvade	, pEnemyInFov		);
+	pFSM->AddTransition(pEnterHouse		, pShootOrEvade	, pEnemyInFov		);
+	pFSM->AddTransition(pReturnToMap	, pShootOrEvade	, pEnemyInFov		);
+	pFSM->AddTransition(pEscapeHouse	, pShootOrEvade	, pEnemyInFov		);
+	//		evade
+	pFSM->AddTransition(pShootOrEvade	, pEvadeState	, pHasNoBullets		);
+	pFSM->AddTransition(pEvadeState		, pWanderState	, pTimer			);
+	//		shoot
+	pFSM->AddTransition(pShootOrEvade	, pShoot		, pHasBullets		);
+	pFSM->AddTransition(pShoot			, pWanderState	, pGotKill			);
 
-	pFSM->AddTransition(pWanderState, pReturnToMap	, pOutsideMap		);
-	pFSM->AddTransition(pReturnToMap, pWanderState	, pInsideMap		);
 
-	//		Evade stuff
-	pFSM->AddTransition(pWanderState, pEvadeState	, pEnemyInFov		);
-	pFSM->AddTransition(pEnterHouse	, pEvadeState	, pEnemyInFov		);
-	pFSM->AddTransition(pReturnToMap, pEvadeState	, pEnemyInFov		);
-	pFSM->AddTransition(pEscapeHouse, pEvadeState	, pEnemyInFov		);
-	pFSM->AddTransition(pEvadeState	, pWanderState	, pTimer			);
+	//		Run Away
+	pFSM->AddTransition(pWanderState	, pRunAway		, pWasHit			);
+	pFSM->AddTransition(pReturnToMap	, pRunAway		, pWasHit			);
+	pFSM->AddTransition(pEscapeHouse	, pRunAway		, pWasHit			);
+
+	pFSM->AddTransition(pRunAway		, pWanderState	, pTimer			);
+
 
 	//		Using Utilities
+	//pFSM->AddTransition(pWanderState, pEat			, pHasToEat			);
+	//pFSM->AddTransition(pEat		, pWanderState	, pPlay1Frame		);
+	//pFSM->AddTransition(pWanderState, pHeal			, pHasToHeal		);
+	//pFSM->AddTransition(pHeal		, pWanderState	, pPlay1Frame		);
+
 
 
 

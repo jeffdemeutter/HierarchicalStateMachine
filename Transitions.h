@@ -86,4 +86,42 @@ class HasToEat : public FSMTransition
 public:
 	virtual bool ToTransition(Blackboard* pBlackboard) const override;
 };
+
+class HasToHeal : public FSMTransition
+{
+public:
+	virtual bool ToTransition(Blackboard* pBlackboard) const override;
+};
+
+class Play1Frame : public FSMTransition
+{
+public:
+	virtual bool ToTransition(Blackboard* pBlackboard) const override { return true; };
+};
+
+class WasHit : public FSMTransition
+{
+public:
+	virtual bool ToTransition(Blackboard* pBlackboard) const override;
+};
+
+class GotKill : public FSMTransition
+{
+public:
+	virtual bool ToTransition(Blackboard* pBlackboard) const override;
+};
+
+class HasNoBullets : public FSMTransition
+{
+public:
+	virtual bool ToTransition(Blackboard* pBlackboard) const override;
+};
+
+class HasBullets : public FSMTransition
+{
+public:
+	virtual bool ToTransition(Blackboard* pBlackboard) const override;
+};
+
+
 #endif

@@ -27,24 +27,20 @@ public:
 	virtual void OnEnter(Blackboard* pBlackboard) override;
 	virtual void OnExit(Blackboard* pBlackboard) override;
 	virtual void Update(Blackboard* pBlackboard, float deltaTime) override;
-private:
-	Vector2 delta{};
 };
 
 class ReturnToMap final : public FSMState
 {
 public:
 	ReturnToMap() : FSMState() {};
-	virtual void OnEnter(Blackboard* pBlackboard) override;
+	virtual void Update(Blackboard* pBlackboard, float deltaTime) override;
 };
 
 class EnterHouse : public FSMState
 {
 public:
 	EnterHouse() : FSMState() {}
-	virtual void OnEnter(Blackboard* pBlackboard) override;
 	virtual void Update(Blackboard* pBlackboard, float deltaTime) override;
-
 };
 
 class EscapeHouse : public FSMState
@@ -60,4 +56,37 @@ public:
 	PickUpItem() : FSMState() {}
 	virtual void OnEnter(Blackboard* pBlackboard) override;
 	virtual void Update(Blackboard* pBlackboard, float deltaTime) override;
+};
+
+class Eat : public FSMState
+{
+public:
+	Eat() : FSMState() {}
+	virtual void OnEnter(Blackboard* pBlackboard) override;
+};
+
+class RunAway : public FSMState
+{
+public:
+	RunAway() : FSMState() {}
+	virtual void OnEnter(Blackboard* pBlackboard) override;
+	virtual void Update(Blackboard* pBlackboard, float deltaTime) override;
+	virtual void OnExit(Blackboard* pBlackboard) override;
+};
+
+class Heal : public FSMState
+{
+public:
+	Heal() : FSMState() {}
+	virtual void OnEnter(Blackboard* pBlackboard) override;
+};
+
+class Shoot : public FSMState
+{
+public:
+	Shoot() : FSMState() {}
+	virtual void OnEnter(Blackboard* pBlackboard) override;
+	virtual void Update(Blackboard* pBlackboard, float deltaTime) override;
+private:
+	float m_Timer;
 };
