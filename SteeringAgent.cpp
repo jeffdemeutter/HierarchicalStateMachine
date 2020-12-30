@@ -6,10 +6,9 @@ SteeringAgent::SteeringAgent()
 	: m_pWander{ new Wander() }
 	, m_pSeek{ new Seek() }
 	, m_pFlee{ new Flee() }
+	, m_pRotate{ new Rotate() }
 {
-
 	SetToWander();
-
 }
 
 SteeringAgent::~SteeringAgent()
@@ -18,6 +17,7 @@ SteeringAgent::~SteeringAgent()
 	SAFE_DELETE(m_pWander);
 	SAFE_DELETE(m_pSeek);
 	SAFE_DELETE(m_pFlee);
+	SAFE_DELETE(m_pRotate);
 	SAFE_DELETE(m_pSteeringBehaviour);
 }
 
@@ -34,7 +34,6 @@ SteeringPlugin_Output SteeringAgent::Update(float deltaT, const AgentInfo& agent
 
 
 	// steering.AngularVelocity = m_AngSpeed; //Rotate your character to inspect the world while walking
-	steering.AutoOrient = true; //Setting AutoOrientate to TRue overrides the AngularVelocity
 
 	steering.RunMode = m_CanRun; //If RunMode is True > MaxLinSpd is increased for a limited time (till your stamina runs out)
 
@@ -96,4 +95,10 @@ void SteeringAgent::SetToFlee(const Vector2& evadeTarget)
 {
 	m_pSteeringBehaviour = m_pFlee;
 	m_pSteeringBehaviour->SetTarget(evadeTarget);
+}
+
+void SteeringAgent::SetToRotate(const Vector2& rotateTowards)
+{
+	m_pSteeringBehaviour = m_pRotate;
+	m_pSteeringBehaviour->SetTarget(rotateTowards);
 }

@@ -78,3 +78,16 @@ public:
 protected:
 	float m_FleeRadius = 10.f;
 };
+
+///////////////////////////////////////
+//Rotate
+//****
+class Rotate final : public SteeringBehavior
+{
+public:
+	Rotate() = default;
+	virtual ~Rotate() = default;
+
+	//Seek Behaviour
+	virtual SteeringPlugin_Output CalculateSteering(float deltaT, const AgentInfo& agent) override;
+};

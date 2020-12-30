@@ -30,6 +30,8 @@ void Plugin::Initialize(IBaseInterface* pInterface, PluginInfo& info)
 	pBlackboard->AddData("target"	, m_Target);
 	pBlackboard->AddData("house"	, HouseInfo{});
 	pBlackboard->AddData("entity"	, EntityInfo{});
+	pBlackboard->AddData("enemy"	, EnemyInfo{});
+	pBlackboard->AddData("vItems"	, deque<EntityInfo>{});
 	pBlackboard->AddData("enemyVec"	, vector<EnemyInfo>{});
 	pBlackboard->AddData("timer"	, static_cast<float>(0.f));
 	pBlackboard->AddData("kills"	, static_cast<int>(0));
@@ -48,6 +50,7 @@ void Plugin::Initialize(IBaseInterface* pInterface, PluginInfo& info)
 	Heal*			pHeal			= new Heal();
 	Shoot*			pShoot			= new Shoot();
 	FSMState*		pShootOrEvade	= new FSMState();
+	TurnAround*		pTurnAround		= new TurnAround();
 	
 	m_pStates.push_back(pEnterHouse);
 	m_pStates.push_back(pWanderState);
@@ -60,12 +63,13 @@ void Plugin::Initialize(IBaseInterface* pInterface, PluginInfo& info)
 	m_pStates.push_back(pHeal);
 	m_pStates.push_back(pShoot);
 	m_pStates.push_back(pShootOrEvade);
+	m_pStates.push_back(pTurnAround);
 
 	// ===================================================================
 	// Create transitions
 	HouseInFov*			pHouseInFov			= new HouseInFov();
 	ItemInFov*			pItemInFov			= new ItemInFov();
-	NoItemInFov*		pNoItemInFov		= new NoItemInFov();
+	PickedUpAll*		pPickedUpAll		= new PickedUpAll();
 	VisitedHouse*		pVisitedHouse		= new VisitedHouse();
 	IsInVisitedHouse*	pIsInVisitedHouse	= new IsInVisitedHouse();
 	IsNotInHouse*		pIsNotInHouse		= new IsNotInHouse();
@@ -81,10 +85,11 @@ void Plugin::Initialize(IBaseInterface* pInterface, PluginInfo& info)
 	GotKill*			pGotKill			= new GotKill();
 	HasNoBullets*		pHasNoBullets		= new HasNoBullets();
 	HasBullets*			pHasBullets			= new HasBullets();
+	LowStamina*			pLowStamina			= new LowStamina();
 
 	m_pTransitions.push_back(pHouseInFov);
 	m_pTransitions.push_back(pItemInFov);
-	m_pTransitions.push_back(pNoItemInFov);
+	m_pTransitions.push_back(pPickedUpAll);
 	m_pTransitions.push_back(pVisitedHouse);
 	m_pTransitions.push_back(pIsInVisitedHouse);
 	m_pTransitions.push_back(pIsNotInHouse);
@@ -100,6 +105,7 @@ void Plugin::Initialize(IBaseInterface* pInterface, PluginInfo& info)
 	m_pTransitions.push_back(pHasNoBullets);
 	m_pTransitions.push_back(pGotKill);
 	m_pTransitions.push_back(pHasBullets);
+	m_pTransitions.push_back(pLowStamina);
 
 
 	// ===================================================================
@@ -113,7 +119,7 @@ void Plugin::Initialize(IBaseInterface* pInterface, PluginInfo& info)
 	pFSM->AddTransition(pWanderState	, pPickupItem	, pItemInFov		);
 	pFSM->AddTransition(pEnterHouse		, pPickupItem	, pItemInFov		);
 	pFSM->AddTransition(pEscapeHouse	, pPickupItem	, pItemInFov		);
-	pFSM->AddTransition(pPickupItem		, pWanderState	, pNoItemInFov		);
+	pFSM->AddTransition(pPickupItem		, pEscapeHouse	, pPickedUpAll		);
 
 	pFSM->AddTransition(pEnterHouse		, pWanderState	, pVisitedHouse		);
 	pFSM->AddTransition(pWanderState	, pEscapeHouse	, pIsInVisitedHouse	);
@@ -128,12 +134,14 @@ void Plugin::Initialize(IBaseInterface* pInterface, PluginInfo& info)
 	pFSM->AddTransition(pEnterHouse		, pShootOrEvade	, pEnemyInFov		);
 	pFSM->AddTransition(pReturnToMap	, pShootOrEvade	, pEnemyInFov		);
 	pFSM->AddTransition(pEscapeHouse	, pShootOrEvade	, pEnemyInFov		);
+	pFSM->AddTransition(pPickupItem		, pShootOrEvade	, pEnemyInFov		);
+	//		shoot
+	pFSM->AddTransition(pShootOrEvade	, pShoot		, pHasBullets		);
+	pFSM->AddTransition(pShoot			, pWanderState	, pNoEnemyInFov		);
+	pFSM->AddTransition(pShoot			, pWanderState	, pGotKill			);
 	//		evade
 	pFSM->AddTransition(pShootOrEvade	, pEvadeState	, pHasNoBullets		);
 	pFSM->AddTransition(pEvadeState		, pWanderState	, pTimer			);
-	//		shoot
-	pFSM->AddTransition(pShootOrEvade	, pShoot		, pHasBullets		);
-	pFSM->AddTransition(pShoot			, pWanderState	, pGotKill			);
 
 
 	//		Run Away
@@ -141,14 +149,17 @@ void Plugin::Initialize(IBaseInterface* pInterface, PluginInfo& info)
 	pFSM->AddTransition(pReturnToMap	, pRunAway		, pWasHit			);
 	pFSM->AddTransition(pEscapeHouse	, pRunAway		, pWasHit			);
 
+
+	pFSM->AddTransition(pRunAway		, pTurnAround	, pLowStamina		);
 	pFSM->AddTransition(pRunAway		, pWanderState	, pTimer			);
 
+	pFSM->AddTransition(pTurnAround		, pShootOrEvade	, pEnemyInFov		);
 
 	//		Using Utilities
-	//pFSM->AddTransition(pWanderState, pEat			, pHasToEat			);
-	//pFSM->AddTransition(pEat		, pWanderState	, pPlay1Frame		);
-	//pFSM->AddTransition(pWanderState, pHeal			, pHasToHeal		);
-	//pFSM->AddTransition(pHeal		, pWanderState	, pPlay1Frame		);
+	pFSM->AddTransition(pWanderState	, pEat			, pHasToEat			);
+	pFSM->AddTransition(pEat			, pWanderState	, pPlay1Frame		);
+	pFSM->AddTransition(pWanderState	, pHeal			, pHasToHeal		);
+	pFSM->AddTransition(pHeal			, pWanderState	, pPlay1Frame		);
 
 
 
@@ -175,7 +186,7 @@ void Plugin::InitGameDebugParams(GameDebugParams& params)
 {
 	params.AutoFollowCam = true; //Automatically follow the AI? (Default = true)
 	params.RenderUI = true; //Render the IMGUI Panel? (Default = true)
-	params.SpawnEnemies = true; //Do you want to spawn enemies? (Default = true)
+	params.SpawnEnemies = false; //Do you want to spawn enemies? (Default = true)
 	params.EnemyCount = 20; //How many enemies? (Default = 20)
 	params.GodMode = false; //GodMode > You can't die, can be usefull to inspect certain behaviours (Default = false)
 	params.AutoGrabClosestItem = true; //A call to Item_Grab(...) returns the closest item that can be grabbed. (EntityInfo argument is ignored)
@@ -187,13 +198,13 @@ void Plugin::Update(float dt)
 {
 	//Demo Event Code
 	//In the end your AI should be able to walk around without external input
-	//if (m_pInterface->Input_IsMouseButtonUp(Elite::InputMouseButton::eLeft))
-	//{
-	//	//Update target based on input
-	//	Elite::MouseData mouseData = m_pInterface->Input_GetMouseData(Elite::InputType::eMouseButton, Elite::InputMouseButton::eLeft);
-	//	const Elite::Vector2 pos = Elite::Vector2(static_cast<float>(mouseData.X), static_cast<float>(mouseData.Y));
-	//	m_Target = m_pInterface->Debug_ConvertScreenToWorld(pos);
-	//}
+	if (m_pInterface->Input_IsMouseButtonUp(Elite::InputMouseButton::eLeft))
+	{
+		//Update target based on input
+		Elite::MouseData mouseData = m_pInterface->Input_GetMouseData(Elite::InputType::eMouseButton, Elite::InputMouseButton::eLeft);
+		const Elite::Vector2 pos = Elite::Vector2(static_cast<float>(mouseData.X), static_cast<float>(mouseData.Y));
+		m_Target = m_pInterface->Debug_ConvertScreenToWorld(pos);
+	}
 	//else if (m_pInterface->Input_IsKeyboardKeyDown(Elite::eScancode_Space))
 	//{
 	//	m_CanRun = true;
@@ -249,7 +260,6 @@ SteeringPlugin_Output Plugin::UpdateSteering(float dt)
 
 	//INVENTORY USAGE DEMO
 	//********************
-
 	//if (m_GrabItem)
 	//{
 	//	ItemInfo item;
@@ -277,8 +287,9 @@ SteeringPlugin_Output Plugin::UpdateSteering(float dt)
 	//	m_pInterface->Inventory_RemoveItem(0);
 	//}
 
-
-	// Wander Behaviour
+		
+	//m_pSteeringAgent->SetToRotate(m_Target);
+	//return m_pSteeringAgent->Update(dt, m_pInterface->Agent_GetInfo());
 	return m_pSteeringAgent->Update(dt, m_pInterface->Agent_GetInfo());
 }
 

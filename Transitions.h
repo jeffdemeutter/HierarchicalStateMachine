@@ -33,7 +33,7 @@ public:
 	virtual bool ToTransition(Blackboard* pBlackboard) const override;
 };
 
-class NoItemInFov : public FSMTransition
+class PickedUpAll : public FSMTransition
 {
 public:
 	virtual bool ToTransition(Blackboard* pBlackboard) const override;
@@ -123,5 +123,10 @@ public:
 	virtual bool ToTransition(Blackboard* pBlackboard) const override;
 };
 
+class LowStamina : public FSMTransition
+{
+public:
+	virtual bool ToTransition(Blackboard* pBlackboard) const override;
+};
 
 #endif

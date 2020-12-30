@@ -53,31 +53,74 @@ void PickUpItem::OnEnter(Blackboard* pBlackboard)
 {
 	SteeringAgent* pAgent = nullptr;
 	IExamInterface* pInterface = nullptr;
-	EntityInfo entityInfo{};
+	deque<EntityInfo> vEntities{};
 	if (!pBlackboard->GetData("agent", pAgent))	return;
 	if (!pBlackboard->GetData("interface", pInterface)) return;
-	if (!pBlackboard->GetData("entity", entityInfo)) return;
+	if (!pBlackboard->GetData("vItems", vEntities)) return;
 
 	if (!pAgent || !pInterface) return;
 
-	pAgent->SetToSeek(entityInfo.Location);
+	pAgent->SetToSeek(vEntities[0].Location);
 }
 
 void PickUpItem::Update(Blackboard* pBlackboard, float deltaTime)
 {
+	SteeringAgent* pAgent = nullptr;
 	IExamInterface* pInterface = nullptr;
-	EntityInfo itemInfo{};
+	deque<EntityInfo> vEntities{};
+	if (!pBlackboard->GetData("agent", pAgent))	return;
 	if (!pBlackboard->GetData("interface", pInterface)) return;
-	if (!pBlackboard->GetData("entity", itemInfo)) return;
+	if (!pBlackboard->GetData("vItems", vEntities)) return;
 
 	if (!pInterface) return;
 
-	if (Distance(itemInfo.Location, pInterface->Agent_GetInfo().Position) > pInterface->Agent_GetInfo().GrabRange)
+	// check for new items in fov
+
+	const Vector2 agentPos{ pInterface->Agent_GetInfo().Position };
+
+	if (vEntities.size() == 0) return;
+	pAgent->SetToSeek(vEntities[0].Location);
+
+	EntityInfo entityInfo;
+	for (int i = 0;; ++i)
+	{
+		// if no entity is found, break
+		if (!pInterface->Fov_GetEntityByIndex(i, entityInfo))
+			break;
+
+		// if entity is not an item go to next entity
+		if (entityInfo.Type != eEntityType::ITEM)
+			continue;
+
+		// checks if that item is already in the deque
+		auto found = std::find_if(vEntities.begin(), vEntities.end(), [&entityInfo](const auto& e) {
+				return entityInfo.EntityHash == e.EntityHash;
+			});
+
+		// if in deck, go to next item in fov
+		if (found != vEntities.end())
+			continue;
+
+		// if not in deque, add it
+		vEntities.push_back(entityInfo);
+		continue;
+	}
+	// update the deque with possible new items
+	std::sort(vEntities.begin(), vEntities.end(), [&agentPos](const EntityInfo& a, const EntityInfo& b) {
+		return (Distance(agentPos, a.Location) < Distance(agentPos, b.Location));
+	});
+	pBlackboard->ChangeData("vItems", vEntities);
+
+	// check if its in grab range
+	if (Distance(vEntities[0].Location, agentPos) > pInterface->Agent_GetInfo().GrabRange)
 		return;
 
 	ItemInfo pickedUpItem{};
-	if (pInterface->Item_Grab(itemInfo, pickedUpItem))
+	if (pInterface->Item_Grab(vEntities[0], pickedUpItem))
 	{
+		vEntities.pop_front();
+		pBlackboard->ChangeData("vItems", vEntities);
+
 		if (eItemType::PISTOL == pickedUpItem.Type)
 		{
 			if (pInterface->Inventory_AddItem(0, pickedUpItem)) return;
@@ -194,9 +237,7 @@ void Eat::OnEnter(Blackboard* pBlackboard)
 void RunAway::OnEnter(Blackboard* pBlackboard)
 {
 	SteeringAgent* pAgent = nullptr;
-	IExamInterface* pInterface = nullptr;
 	if (!pBlackboard->GetData("agent", pAgent)) return;
-	if (!pBlackboard->GetData("interface", pInterface)) return;
 
 	pAgent->CanRun(true);
 }
@@ -214,9 +255,7 @@ void RunAway::Update(Blackboard* pBlackboard, float deltaTime)
 void RunAway::OnExit(Blackboard* pBlackboard)
 {
 	SteeringAgent* pAgent = nullptr;
-	IExamInterface* pInterface = nullptr;
 	if (!pBlackboard->GetData("agent", pAgent)) return;
-	if (!pBlackboard->GetData("interface", pInterface)) return;
 
 	pAgent->CanRun(false);
 }
@@ -237,13 +276,36 @@ void Shoot::OnEnter(Blackboard* pBlackboard)
 
 void Shoot::Update(Blackboard* pBlackboard, float deltaTime)
 {
+	SteeringAgent* pAgent = nullptr;
 	IExamInterface* pInterface = nullptr;
+	EnemyInfo enemyInfo{};
+	if (!pBlackboard->GetData("agent", pAgent)) return;
 	if (!pBlackboard->GetData("interface", pInterface)) return;
+	if (!pBlackboard->GetData("enemy", enemyInfo)) return;
 	if (!pInterface) return;
+
+	pAgent->SetToRotate(enemyInfo.Location);
+
+	pInterface->Draw_Segment(pInterface->Agent_GetInfo().Position, enemyInfo.Location, { 1.f, 0.f, 0.f });
+	pInterface->Draw_Segment(pInterface->Agent_GetInfo().Position, pInterface->Agent_GetInfo().Position + pInterface->Agent_GetInfo().LinearVelocity, { 0.f, 1.f, 0.f });
+
+	//EntityInfo entityInfo{};
+	//for (int i = 0;; ++i)
+	//{
+	//	if (pInterface->Fov_GetEntityByIndex(i, entityInfo))
+	//		break;
+
+	//	if (entityInfo.Type != eEntityType::ENEMY)
+	//		continue;
+
+	//	pInterface->Enemy_GetInfo(entityInfo, enemyInfo);
+
+	//	pBlackboard->ChangeData("enemy", enemyInfo);
+	//}
 
 	m_Timer += deltaTime;
 
-	if (m_Timer > 3.f)
+	if (m_Timer > 0.5f)
 	{
 		UINT idx = 0;
 		ItemInfo itemInfo{};
@@ -256,5 +318,18 @@ void Shoot::Update(Blackboard* pBlackboard, float deltaTime)
 			pInterface->Inventory_UseItem(idx);
 		else
 			pInterface->Inventory_RemoveItem(idx);
+
+		// reset timer
+		m_Timer = 0.f;
 	}
+}
+
+void TurnAround::Update(Blackboard* pBlackboard, float deltaTime)
+{
+	SteeringAgent* pAgent = nullptr;
+	IExamInterface* pInterface = nullptr;
+	if (!pBlackboard->GetData("agent", pAgent)) return;
+	if (!pBlackboard->GetData("interface", pInterface)) return;
+
+	pAgent->SetToSeek(pInterface->Agent_GetInfo().Position - GetNormalized(pInterface->Agent_GetInfo().LinearVelocity));
 }

@@ -31,6 +31,7 @@ bool ItemInFov::ToTransition(Blackboard* pBlackboard) const
 	if (!pInterface) return false;
 
 	EntityInfo entityInfo;
+	deque<EntityInfo> vEntities;
 	for (int i = 0;; ++i)
 	{
 		// if no entity is found, break
@@ -41,24 +42,21 @@ bool ItemInFov::ToTransition(Blackboard* pBlackboard) const
 		if (entityInfo.Type != eEntityType::ITEM)
 			continue;
 
-		pBlackboard->ChangeData("entity", entityInfo);
-		pBlackboard->ChangeData("target", entityInfo.Location);
-
+		vEntities.push_back(entityInfo);
+		pBlackboard->ChangeData("vItems", vEntities);
 		return true;
 	}
 
 	return false;
 }
 
-bool NoItemInFov::ToTransition(Blackboard* pBlackboard) const
+bool PickedUpAll::ToTransition(Blackboard* pBlackboard) const
 {
-	IExamInterface* pInterface = nullptr;
-	if (!pBlackboard->GetData("interface", pInterface)) return false;
-	if (!pInterface) return false;
+	deque<EntityInfo> vEntities;
+	pBlackboard->GetData("vItems", vEntities);
 
-	UINT idx = 0;
-	EntityInfo entityInfo;
-	return !pInterface->Fov_GetEntityByIndex(idx, entityInfo);
+	bool d = (vEntities.size() == 0);
+	return d;
 }
 
 bool VisitedHouse::ToTransition(Blackboard* pBlackboard) const
@@ -157,6 +155,8 @@ bool EnemyInFov::ToTransition(Blackboard* pBlackboard) const
 		EnemyInfo enemyInfo{};
 		pInterface->Enemy_GetInfo(entityInfo, enemyInfo);
 
+		pBlackboard->ChangeData("enemy", enemyInfo);
+
 		pBlackboard->ChangeData("timer", 0.5f);
 		pAgent->ResetTimer();
 		return true;
@@ -169,8 +169,21 @@ bool NoEnemyInFov::ToTransition(Blackboard* pBlackboard) const
 	if (!pBlackboard->GetData("interface", pInterface)) return false;
 	if (!pInterface) return false;
 
-	EntityInfo entityInfo;
-	return !pInterface->Fov_GetEntityByIndex(0, entityInfo);
+	// loop over the enemies inside the fov
+	EntityInfo entityInfo{};
+	for (int i = 0;; ++i)
+	{
+		// no (more) entities in fov
+		if (!pInterface->Fov_GetEntityByIndex(i, entityInfo))
+			return true;
+
+		// if the entity is an enemy
+		if (entityInfo.Type == eEntityType::ENEMY)
+			return false;
+
+		continue;
+	}
+
 }
 
 bool Timer::ToTransition(Blackboard* pBlackboard) const
@@ -208,7 +221,7 @@ bool WasHit::ToTransition(Blackboard* pBlackboard) const
 
 	if (pInterface->Agent_GetInfo().WasBitten)
 	{
-		pBlackboard->ChangeData("timer", 3.f);
+		pBlackboard->ChangeData("timer", 1.f);
 		pAgent->ResetTimer();
 
 		return true;
@@ -233,14 +246,18 @@ bool GotKill::ToTransition(Blackboard* pBlackboard) const
 {
 	IExamInterface* pInterface = nullptr;
 	if (!pBlackboard->GetData("interface", pInterface)) return false;
+	// get previous frame killNum
 	int kills = 0;
 	pBlackboard->GetData("kills", kills);
 
-	if (pInterface->World_GetStats().NumEnemiesKilled != kills);
+	// check if killNum has changed this frame
+	if (pInterface->World_GetStats().NumEnemiesKilled != kills)
 	{
 		pBlackboard->ChangeData("kills", pInterface->World_GetStats().NumEnemiesKilled);
 		return true;
 	}
+	
+	// still the same
 	return false;
 }
 
@@ -252,7 +269,7 @@ bool HasNoBullets::ToTransition(Blackboard* pBlackboard) const
 	//check for the first gun
 	ItemInfo itemInfo{};
 	int bullets{ 0 };
-	if (!pInterface->Inventory_GetItem(0, itemInfo))
+	if (pInterface->Inventory_GetItem(0, itemInfo))
 		bullets += pInterface->Weapon_GetAmmo(itemInfo);
 	// check for the second gun
 	if (pInterface->Inventory_GetItem(1, itemInfo))
@@ -269,11 +286,19 @@ bool HasBullets::ToTransition(Blackboard* pBlackboard) const
 	//check for the first gun
 	ItemInfo itemInfo{};
 	int bullets{ 0 };
-	if (!pInterface->Inventory_GetItem(0, itemInfo))
+	if (pInterface->Inventory_GetItem(0, itemInfo))
 		bullets += pInterface->Weapon_GetAmmo(itemInfo);
 	// check for the second gun
 	if (pInterface->Inventory_GetItem(1, itemInfo))
 		bullets += pInterface->Weapon_GetAmmo(itemInfo);
 
-	return (bullets > 3);
+	return (bullets >= 3);
+}
+
+bool LowStamina::ToTransition(Blackboard* pBlackboard) const
+{
+	IExamInterface* pInterface = nullptr;
+	if (!pBlackboard->GetData("interface", pInterface)) return false;
+
+	return (pInterface->Agent_GetInfo().Stamina < 1.f);
 }

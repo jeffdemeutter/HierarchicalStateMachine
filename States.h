@@ -43,14 +43,14 @@ public:
 	virtual void Update(Blackboard* pBlackboard, float deltaTime) override;
 };
 
-class EscapeHouse : public FSMState
+class EscapeHouse final : public FSMState
 {
 public:
 	EscapeHouse() : FSMState() {}
 	virtual void Update(Blackboard* pBlackboard, float deltaTime) override;
 };
 
-class PickUpItem : public FSMState
+class PickUpItem final : public FSMState
 {
 public:
 	PickUpItem() : FSMState() {}
@@ -58,14 +58,14 @@ public:
 	virtual void Update(Blackboard* pBlackboard, float deltaTime) override;
 };
 
-class Eat : public FSMState
+class Eat final : public FSMState
 {
 public:
 	Eat() : FSMState() {}
 	virtual void OnEnter(Blackboard* pBlackboard) override;
 };
 
-class RunAway : public FSMState
+class RunAway final : public FSMState
 {
 public:
 	RunAway() : FSMState() {}
@@ -74,19 +74,26 @@ public:
 	virtual void OnExit(Blackboard* pBlackboard) override;
 };
 
-class Heal : public FSMState
+class Heal final : public FSMState
 {
 public:
 	Heal() : FSMState() {}
 	virtual void OnEnter(Blackboard* pBlackboard) override;
 };
 
-class Shoot : public FSMState
+class Shoot final : public FSMState
 {
 public:
 	Shoot() : FSMState() {}
 	virtual void OnEnter(Blackboard* pBlackboard) override;
 	virtual void Update(Blackboard* pBlackboard, float deltaTime) override;
 private:
-	float m_Timer;
+	float m_Timer = 0.f;
+};
+
+class TurnAround final : public FSMState
+{
+public:
+	TurnAround() : FSMState() {}
+	virtual void Update(Blackboard* pBlackboard, float deltaTime) override;
 };
