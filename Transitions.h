@@ -15,118 +15,137 @@ using namespace Elite;
 //---------------------------------------------------------------------------------------------------
 // Transitions
 //---------------------------------------------------------------------------------------------------
-class HouseInFov : public FSMTransition
+class HouseInFov final : public FSMTransition
 {
 public:
 	virtual bool ToTransition(Blackboard* pBlackboard) const override;
 };
 
-class ItemInFov : public FSMTransition
+class ItemInFov final : public FSMTransition
 {
 public:
 	virtual bool ToTransition(Blackboard* pBlackboard) const override;
 };
 
-class EnemyInFov : public FSMTransition
+class EnemyInFov final : public FSMTransition
 {
 public:
 	virtual bool ToTransition(Blackboard* pBlackboard) const override;
 };
 
-class PickedUpAll : public FSMTransition
+class PickedUpAll final : public FSMTransition
 {
 public:
 	virtual bool ToTransition(Blackboard* pBlackboard) const override;
 };
 
-class NoEnemyInFov : public FSMTransition
+class NoEnemyInFov final : public FSMTransition
 {
 public:
 	virtual bool ToTransition(Blackboard* pBlackboard) const override;
 };
 
-class VisitedHouse : public FSMTransition
+class VisitedHouse final : public FSMTransition
 {
 public:
 	virtual bool ToTransition(Blackboard* pBlackboard) const override;
 };
 
-class IsInVisitedHouse : public FSMTransition
+class IsInVisitedHouse final : public FSMTransition
 {
 public:
 	virtual bool ToTransition(Blackboard* pBlackboard) const override;
 };
 
-class IsNotInHouse : public FSMTransition
+class IsNotInHouse final : public FSMTransition
 {
 public:
 	virtual bool ToTransition(Blackboard* pBlackboard) const override;
 };
 
-class OutsideMap : public FSMTransition
+class OutsideMap final : public FSMTransition
 {
 public:
 	virtual bool ToTransition(Blackboard* pBlackboard) const override;
 };
 
-class InsideMap : public FSMTransition
+class InsideMap final : public FSMTransition
 {
 public:
 	virtual bool ToTransition(Blackboard* pBlackboard) const override;
 };
 
-class Timer : public FSMTransition
+class Timer final : public FSMTransition
 {
 public:
 	virtual bool ToTransition(Blackboard* pBlackboard) const override;
 };
 
-class HasToEat : public FSMTransition
+class HasToEat final : public FSMTransition
 {
 public:
 	virtual bool ToTransition(Blackboard* pBlackboard) const override;
 };
 
-class HasToHeal : public FSMTransition
+class HasToHeal final : public FSMTransition
 {
 public:
 	virtual bool ToTransition(Blackboard* pBlackboard) const override;
 };
 
-class Play1Frame : public FSMTransition
+class Play1Frame final : public FSMTransition
 {
 public:
 	virtual bool ToTransition(Blackboard* pBlackboard) const override { return true; };
 };
 
-class WasHit : public FSMTransition
+class WasHit final : public FSMTransition
 {
 public:
 	virtual bool ToTransition(Blackboard* pBlackboard) const override;
 };
 
-class GotKill : public FSMTransition
+class GotKill final : public FSMTransition
 {
 public:
 	virtual bool ToTransition(Blackboard* pBlackboard) const override;
 };
 
-class HasNoBullets : public FSMTransition
+class HasNoBullets final : public FSMTransition
 {
 public:
 	virtual bool ToTransition(Blackboard* pBlackboard) const override;
 };
 
-class HasBullets : public FSMTransition
+class HasBullets final : public FSMTransition
 {
 public:
 	virtual bool ToTransition(Blackboard* pBlackboard) const override;
 };
 
-class LowStamina : public FSMTransition
+class LowStamina final : public FSMTransition
 {
 public:
 	virtual bool ToTransition(Blackboard* pBlackboard) const override;
 };
+
+class InPurgeZone final : public FSMTransition
+{
+public:
+	virtual bool ToTransition(Blackboard* pBlackboard) const override;
+};
+
+class NotInPurge final : public FSMTransition
+{
+public:
+	virtual bool ToTransition(Blackboard* pBlackboard) const override;
+};
+
+class EnemyTooClose final : public FSMTransition
+{
+public:
+	virtual bool ToTransition(Blackboard* pBlackboard) const override;
+};
+
 
 #endif

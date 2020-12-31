@@ -36,10 +36,12 @@ public:
 	virtual void Update(Blackboard* pBlackboard, float deltaTime) override;
 };
 
-class EnterHouse : public FSMState
+class EnterHouse final : public FSMState
 {
 public:
 	EnterHouse() : FSMState() {}
+	virtual void OnEnter(Blackboard* pBlackboard) override;
+	virtual void OnExit(Blackboard* pBlackboard) override;
 	virtual void Update(Blackboard* pBlackboard, float deltaTime) override;
 };
 
@@ -47,6 +49,7 @@ class EscapeHouse final : public FSMState
 {
 public:
 	EscapeHouse() : FSMState() {}
+	virtual void OnEnter(Blackboard* pBlackboard) override;
 	virtual void Update(Blackboard* pBlackboard, float deltaTime) override;
 };
 
@@ -65,12 +68,11 @@ public:
 	virtual void OnEnter(Blackboard* pBlackboard) override;
 };
 
-class RunAway final : public FSMState
+class KillFollowers final : public FSMState
 {
 public:
-	RunAway() : FSMState() {}
+	KillFollowers() : FSMState() {}
 	virtual void OnEnter(Blackboard* pBlackboard) override;
-	virtual void Update(Blackboard* pBlackboard, float deltaTime) override;
 	virtual void OnExit(Blackboard* pBlackboard) override;
 };
 
@@ -85,15 +87,14 @@ class Shoot final : public FSMState
 {
 public:
 	Shoot() : FSMState() {}
-	virtual void OnEnter(Blackboard* pBlackboard) override;
 	virtual void Update(Blackboard* pBlackboard, float deltaTime) override;
-private:
-	float m_Timer = 0.f;
 };
 
-class TurnAround final : public FSMState
+class EscapePurge final : public FSMState
 {
 public:
-	TurnAround() : FSMState() {}
+	EscapePurge() : FSMState() {}
+	virtual void OnEnter(Blackboard* pBlackboard) override;
+	virtual void OnExit(Blackboard* pBlackboard) override;
 	virtual void Update(Blackboard* pBlackboard, float deltaTime) override;
 };

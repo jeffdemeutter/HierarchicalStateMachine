@@ -24,6 +24,18 @@ SteeringAgent::~SteeringAgent()
 SteeringPlugin_Output SteeringAgent::Update(float deltaT, const AgentInfo& agent)
 {
 	m_Timer += deltaT;
+	for (auto& house : m_vHouses)
+	{
+		if (house.visited)
+		{
+			house.timer += deltaT;
+			if (house.timer > 50.f)
+			{
+				house.visited = false;
+				house.timer = 0.f;
+			}
+		}
+	}
 
 	// Decide which behaviour to use
 	if (m_pDecisionMaking)
@@ -45,20 +57,20 @@ void SteeringAgent::SetDecisionMaking(FiniteStateMachine* decisionMakingStructur
 	m_pDecisionMaking = decisionMakingStructure;
 }
 
-void SteeringAgent::SetToVisited(const HouseInfo& house)
+void SteeringAgent::SetHouseToVisited(const HouseInfo& house)
 {
-	auto found = std::find_if(m_Houses.begin(), m_Houses.end(), [&house](const auto& h) { return (house.Center == h.pos); });
-	if (found != m_Houses.end())
+	auto found = std::find_if(m_vHouses.begin(), m_vHouses.end(), [&house](const auto& h) { return (house.Center == h.pos); });
+	if (found != m_vHouses.end())
 		found->visited = true;
 }
 
 bool SteeringAgent::CheckVisitedRecently(const HouseInfo& house)
 {
-	auto found = std::find_if(m_Houses.begin(), m_Houses.end(), [&house](const auto& h) { return (house.Center == h.pos); });
+	auto found = std::find_if(m_vHouses.begin(), m_vHouses.end(), [&house](const auto& h) { return (house.Center == h.pos); });
 	
-	if (found == m_Houses.end())
+	if (found == m_vHouses.end())
 	{
-		m_Houses.push_back(House{ house.Center, true });
+		m_vHouses.push_back(House{ house.Center, false });
 		return false;
 	}
 

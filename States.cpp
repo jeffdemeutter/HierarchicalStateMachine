@@ -35,6 +35,49 @@ void EnterHouse::Update(Blackboard* pBlackboard, float deltaTime)
 	pAgent->SetToSeek(pInterface->NavMesh_GetClosestPathPoint(house.Center));
 }
 
+void EnterHouse::OnEnter(Blackboard* pBlackboard)
+{
+	SteeringAgent* pAgent = nullptr;
+	if (!pBlackboard->GetData("agent", pAgent))	return;
+	pAgent->CanRun(true);
+}
+
+void EnterHouse::OnExit(Blackboard* pBlackboard)
+{
+	SteeringAgent* pAgent = nullptr;
+	IExamInterface* pInterface = nullptr;
+	HouseInfo house{};
+	if (!pBlackboard->GetData("agent", pAgent))	return;
+	if (!pBlackboard->GetData("interface", pInterface)) return;
+	if (!pBlackboard->GetData("house", house)) return;
+
+	if (!pAgent || !pInterface) return;
+
+	pAgent->CanRun(false);
+
+	if(pInterface->Agent_GetInfo().IsInHouse)
+		pAgent->SetHouseToVisited(house);
+}
+
+void EscapeHouse::OnEnter(Blackboard* pBlackboard)
+{
+	SteeringAgent* pAgent = nullptr;
+	IExamInterface* pInterface = nullptr;
+	HouseInfo house{};
+	if (!pBlackboard->GetData("agent", pAgent))	return;
+	if (!pBlackboard->GetData("interface", pInterface)) return;
+	if (!pBlackboard->GetData("house", house)) return;
+
+	if (!pAgent || !pInterface) return;
+
+	Vector2 temp = pInterface->Agent_GetInfo().Position - house.Center;
+	temp.x /= temp.x;
+	temp.y /= temp.y;
+	temp = temp * house.Size;
+
+	pBlackboard->ChangeData("target", house.Center + temp);
+}
+
 void EscapeHouse::Update(Blackboard* pBlackboard, float deltaTime)
 {
 	SteeringAgent* pAgent = nullptr;
@@ -115,24 +158,64 @@ void PickUpItem::Update(Blackboard* pBlackboard, float deltaTime)
 	if (Distance(vEntities[0].Location, agentPos) > pInterface->Agent_GetInfo().GrabRange)
 		return;
 
+	// replace the item
 	ItemInfo pickedUpItem{};
 	if (pInterface->Item_Grab(vEntities[0], pickedUpItem))
 	{
 		vEntities.pop_front();
 		pBlackboard->ChangeData("vItems", vEntities);
 
+		// if item is a pistol
 		if (eItemType::PISTOL == pickedUpItem.Type)
 		{
+			// if the slots are empty, just insert them 
 			if (pInterface->Inventory_AddItem(0, pickedUpItem)) return;
 			if (pInterface->Inventory_AddItem(1, pickedUpItem)) return;
+
+			// otherwise check if the new pistol has more ammo then the current ones in inventory
+			const int newPistolAmmo{ pInterface->Weapon_GetAmmo(pickedUpItem) };
+			ItemInfo pistol{};
+			// pistol 1 ammo (ne need for an if statement since we alrady return if there are no pistols in the slots yet)
+				pInterface->Inventory_GetItem(0, pistol);
+			const int weaponAmmo1 = pInterface->Weapon_GetAmmo(pistol);
+			// pistol 2 ammo
+				pInterface->Inventory_GetItem(1, pistol);
+			const int weaponAmmo2 = pInterface->Weapon_GetAmmo(pistol);
+
+			// checks if found pistol has more ammo then the current ones
+			if (newPistolAmmo > weaponAmmo1 || newPistolAmmo > weaponAmmo2)
+			{
+				// switch lowest ammo first
+				if (weaponAmmo1 < weaponAmmo2)
+				{
+					pInterface->Inventory_RemoveItem(0);
+					if (pInterface->Inventory_AddItem(0, pickedUpItem)) return;
+				}
+				else
+				{
+					pInterface->Inventory_RemoveItem(1);
+					if (pInterface->Inventory_AddItem(1, pickedUpItem)) return;
+				}
+			}
 		}
+		// checks if the item is a medkit
 		else if (eItemType::MEDKIT == pickedUpItem.Type)
 		{
 			if (pInterface->Inventory_AddItem(2, pickedUpItem)) return;
 		}
+		// checks if the item is food
 		else if (eItemType::FOOD == pickedUpItem.Type)
 		{
 			if (pInterface->Inventory_AddItem(3, pickedUpItem)) return;
+
+			// get food energy amt
+			ItemInfo food{};
+				pInterface->Inventory_GetItem(3, food);
+			if (pInterface->Food_GetEnergy(pickedUpItem) > pInterface->Food_GetEnergy(food))
+			{
+				pInterface->Inventory_RemoveItem(3);
+				if (pInterface->Inventory_AddItem(3, pickedUpItem)) return;
+			}
 		}
 
 		pInterface->Inventory_AddItem(4, pickedUpItem);
@@ -234,25 +317,19 @@ void Eat::OnEnter(Blackboard* pBlackboard)
 	pInterface->Inventory_RemoveItem(3);
 }
 
-void RunAway::OnEnter(Blackboard* pBlackboard)
-{
-	SteeringAgent* pAgent = nullptr;
-	if (!pBlackboard->GetData("agent", pAgent)) return;
-
-	pAgent->CanRun(true);
-}
-
-void RunAway::Update(Blackboard* pBlackboard, float deltaTime)
+void KillFollowers::OnEnter(Blackboard* pBlackboard)
 {
 	SteeringAgent* pAgent = nullptr;
 	IExamInterface* pInterface = nullptr;
 	if (!pBlackboard->GetData("agent", pAgent)) return;
 	if (!pBlackboard->GetData("interface", pInterface)) return;
 
-	pAgent->SetToSeek(pInterface->NavMesh_GetClosestPathPoint(pInterface->Agent_GetInfo().Position + pInterface->Agent_GetInfo().LinearVelocity * 3.f));
+	pAgent->SetToSeek(pInterface->NavMesh_GetClosestPathPoint(pInterface->Agent_GetInfo().Position + pInterface->Agent_GetInfo().LinearVelocity));
+
+	pAgent->CanRun(true);
 }
 
-void RunAway::OnExit(Blackboard* pBlackboard)
+void KillFollowers::OnExit(Blackboard* pBlackboard)
 {
 	SteeringAgent* pAgent = nullptr;
 	if (!pBlackboard->GetData("agent", pAgent)) return;
@@ -267,11 +344,6 @@ void Heal::OnEnter(Blackboard* pBlackboard)
 
 	pInterface->Inventory_UseItem(2);
 	pInterface->Inventory_RemoveItem(2);
-}
-
-void Shoot::OnEnter(Blackboard* pBlackboard)
-{
-	m_Timer = 0.f;
 }
 
 void Shoot::Update(Blackboard* pBlackboard, float deltaTime)
@@ -289,47 +361,84 @@ void Shoot::Update(Blackboard* pBlackboard, float deltaTime)
 	pInterface->Draw_Segment(pInterface->Agent_GetInfo().Position, enemyInfo.Location, { 1.f, 0.f, 0.f });
 	pInterface->Draw_Segment(pInterface->Agent_GetInfo().Position, pInterface->Agent_GetInfo().Position + pInterface->Agent_GetInfo().LinearVelocity, { 0.f, 1.f, 0.f });
 
-	//EntityInfo entityInfo{};
-	//for (int i = 0;; ++i)
-	//{
-	//	if (pInterface->Fov_GetEntityByIndex(i, entityInfo))
-	//		break;
-
-	//	if (entityInfo.Type != eEntityType::ENEMY)
-	//		continue;
-
-	//	pInterface->Enemy_GetInfo(entityInfo, enemyInfo);
-
-	//	pBlackboard->ChangeData("enemy", enemyInfo);
-	//}
-
-	m_Timer += deltaTime;
-
-	if (m_Timer > 0.5f)
+	EntityInfo entityInfo{};
+	for (int i = 0;; ++i)
 	{
-		UINT idx = 0;
-		ItemInfo itemInfo{};
-		if (!pInterface->Inventory_GetItem(idx, itemInfo))
-			idx = 1;
-		else if (!pInterface->Inventory_GetItem(idx, itemInfo))
-			return;
+		if (!pInterface->Fov_GetEntityByIndex(i, entityInfo))
+			break;
 
-		if (pInterface->Weapon_GetAmmo(itemInfo) != 0)
-			pInterface->Inventory_UseItem(idx);
-		else
-			pInterface->Inventory_RemoveItem(idx);
+		if (entityInfo.Type != eEntityType::ENEMY)
+			continue;
 
-		// reset timer
-		m_Timer = 0.f;
+		EnemyInfo enemy{};
+		pInterface->Enemy_GetInfo(entityInfo, enemy);
+		pBlackboard->ChangeData("enemy", enemy);
+
+		break;
+	}
+
+	const float rot{ pInterface->Agent_GetInfo().Orientation - float(E_PI_2) };
+	// direction vector of agent
+	const Vector2 forward{ GetNormalized(Vector2{cosf(rot), sinf(rot)}) };
+	// vector from agent towards enemy
+	const Vector2 toEnemy{ GetNormalized(enemyInfo.Location - pInterface->Agent_GetInfo().Position) };
+	const float canShoot{ Dot(toEnemy, forward) };
+	
+	pInterface->Draw_Segment(pInterface->Agent_GetInfo().Position, pInterface->Agent_GetInfo().Position + (forward * pInterface->Agent_GetInfo().MaxLinearSpeed), { 0.0f, 1.f, 0.f });
+	pInterface->Draw_Segment(pInterface->Agent_GetInfo().Position, pInterface->Agent_GetInfo().Position + (toEnemy * pInterface->Agent_GetInfo().MaxLinearSpeed), {1.0f, 0.f, 0.f});
+
+	const float dist = Distance(pInterface->Agent_GetInfo().Position, enemyInfo.Location);
+
+	if (canShoot > 0.999f)
+	{
+		ItemInfo pistol{};
+		// pistol 1 ammo
+		int weaponAmmo1{ 0 };
+		int weaponAmmo2{ 0 };
+		pInterface->Inventory_GetItem(0, pistol);
+		weaponAmmo1 = pInterface->Weapon_GetAmmo(pistol);
+		if (weaponAmmo1 == 0)
+			pInterface->Inventory_RemoveItem(0);
+		// pistol 2 ammo
+		pInterface->Inventory_GetItem(1, pistol);
+		weaponAmmo2 = pInterface->Weapon_GetAmmo(pistol);
+		if (weaponAmmo2 == 0)
+			pInterface->Inventory_RemoveItem(1);
+
+		if (weaponAmmo1 != 0)
+			pInterface->Inventory_UseItem(0);
+		else if (weaponAmmo2 != 0)
+			pInterface->Inventory_UseItem(1);
 	}
 }
 
-void TurnAround::Update(Blackboard* pBlackboard, float deltaTime)
+void EscapePurge::OnEnter(Blackboard* pBlackboard)
+{
+	SteeringAgent* pAgent = nullptr;
+	if (!pBlackboard->GetData("agent", pAgent)) return;
+
+	pAgent->CanRun(true);
+}
+
+void EscapePurge::OnExit(Blackboard* pBlackboard)
+{
+	SteeringAgent* pAgent = nullptr;
+	if (!pBlackboard->GetData("agent", pAgent)) return;
+
+	pAgent->CanRun(false);
+}
+
+void EscapePurge::Update(Blackboard* pBlackboard, float deltaTime)
 {
 	SteeringAgent* pAgent = nullptr;
 	IExamInterface* pInterface = nullptr;
+	PurgeZoneInfo purgeZone{};
 	if (!pBlackboard->GetData("agent", pAgent)) return;
 	if (!pBlackboard->GetData("interface", pInterface)) return;
+	if (!pBlackboard->GetData("purge", purgeZone)) return;
 
-	pAgent->SetToSeek(pInterface->Agent_GetInfo().Position - GetNormalized(pInterface->Agent_GetInfo().LinearVelocity));
+	// times 3.f to make sure it is far enough
+	const Vector2 target = (pInterface->Agent_GetInfo().Position - purgeZone.Center);
+
+	pAgent->SetToSeek(pInterface->NavMesh_GetClosestPathPoint( target ));
 }

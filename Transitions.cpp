@@ -17,11 +17,8 @@ bool HouseInFov::ToTransition(Blackboard* pBlackboard) const
 			return false;
 
 		pBlackboard->ChangeData("house", houseInfo);
-
 		return true;
 	}
-
-	return false;
 }
 
 bool ItemInFov::ToTransition(Blackboard* pBlackboard) const
@@ -72,7 +69,7 @@ bool VisitedHouse::ToTransition(Blackboard* pBlackboard) const
 	if (Distance(pInterface->Agent_GetInfo().Position, house.Center) < 2.f)
 	{
 		pBlackboard->ChangeData("target", house.Center + house.Size);
-		pAgent->SetToVisited(house);
+		pAgent->SetHouseToVisited(house);
 		return true;
 	}
 
@@ -90,10 +87,7 @@ bool IsInVisitedHouse::ToTransition(Blackboard* pBlackboard) const
 	if (!pAgent || !pInterface) return false;
 
 	if (pInterface->Agent_GetInfo().IsInHouse)
-	{
-		pBlackboard->ChangeData("target", house.Center + house.Size);
 		return true;
-	}
 
 	return false;
 }
@@ -292,13 +286,67 @@ bool HasBullets::ToTransition(Blackboard* pBlackboard) const
 	if (pInterface->Inventory_GetItem(1, itemInfo))
 		bullets += pInterface->Weapon_GetAmmo(itemInfo);
 
-	return (bullets >= 3);
+	return (bullets != 0);
 }
 
-bool LowStamina::ToTransition(Blackboard* pBlackboard) const
+bool InPurgeZone::ToTransition(Blackboard* pBlackboard) const
+{
+	SteeringAgent* pAgent = nullptr;
+	IExamInterface* pInterface = nullptr;
+	if (!pBlackboard->GetData("agent", pAgent)) return false;
+	if (!pBlackboard->GetData("interface", pInterface)) return false;
+	if (!pAgent || !pInterface) return false;
+
+	EntityInfo entityInfo;
+	for (int i = 0;; ++i)
+	{
+		// if no entity is found, break
+		if (!pInterface->Fov_GetEntityByIndex(i, entityInfo))
+			break;
+
+		// if entity is not an enemy go to next entity
+		if (entityInfo.Type != eEntityType::PURGEZONE)
+			continue;
+
+		PurgeZoneInfo PurgeZoneInfo{};
+		pInterface->PurgeZone_GetInfo(entityInfo, PurgeZoneInfo);
+
+		pBlackboard->ChangeData("purge", PurgeZoneInfo);
+		return true;
+	}
+}
+
+bool NotInPurge::ToTransition(Blackboard* pBlackboard) const
 {
 	IExamInterface* pInterface = nullptr;
 	if (!pBlackboard->GetData("interface", pInterface)) return false;
+	if (!pInterface) return false;
 
-	return (pInterface->Agent_GetInfo().Stamina < 1.f);
+	// loop over the enemies inside the fov
+	EntityInfo entityInfo{};
+	for (int i = 0;; ++i)
+	{
+		// no (more) entities in fov
+		if (!pInterface->Fov_GetEntityByIndex(i, entityInfo))
+			return true;
+
+		// if the entity is an enemy
+		if (entityInfo.Type == eEntityType::PURGEZONE)
+			return false;
+
+		continue;
+	}
 }
+
+bool EnemyTooClose::ToTransition(Blackboard* pBlackboard) const
+{
+	IExamInterface* pInterface = nullptr;
+	EnemyInfo enemyInfo{};
+	if (!pBlackboard->GetData("interface", pInterface)) return false;
+	if (!pBlackboard->GetData("enemy", enemyInfo)) return false;
+	if (!pInterface) return false;
+
+	// returns true if enemy is within 5.f radius
+	return (Distance(pInterface->Agent_GetInfo().Position, enemyInfo.Location) < 5.f);
+}
+

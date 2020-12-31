@@ -38,11 +38,8 @@ SteeringPlugin_Output Flee::CalculateSteering(float deltaT, const AgentInfo& age
 {
 	SteeringPlugin_Output steering{};
 
-	if (abs(Elite::Distance(agent.Position, m_Target)) < m_FleeRadius)
-	{
-		steering = Seek::CalculateSteering(deltaT, agent);
-		steering.LinearVelocity *= -1;
-	}
+	steering = Seek::CalculateSteering(deltaT, agent);
+	steering.LinearVelocity *= -1;
 
 	steering.AutoOrient = true;
 
@@ -66,7 +63,7 @@ SteeringPlugin_Output Rotate::CalculateSteering(float deltaT, const AgentInfo& a
 		desired += E_TAU;
 
 	// multiply desired by some value to make it go as fast as possible (30.f)
-	steering.AngularVelocity = desired * 30.f;
+	steering.AngularVelocity = desired * agent.MaxAngularSpeed * 30.f;
 
 	steering.AutoOrient = false;
 

@@ -57,8 +57,8 @@ public:
 
 protected:
 	float m_WalkDelta = 0.f;
-	const float m_DeltaMultiplier = 0.08f;
-	float m_Offset = 8.f;
+	const float m_DeltaMultiplier = 0.1f;
+	float m_Offset = 10.f;
 	float m_Radius = 3.f;
 };
 
@@ -73,10 +73,6 @@ public:
 
 	//Seek Behaviour
 	virtual SteeringPlugin_Output CalculateSteering(float deltaT, const AgentInfo& agent) override;
-	void SetFleeRadius(float radius) { m_FleeRadius = radius; }
-
-protected:
-	float m_FleeRadius = 10.f;
 };
 
 ///////////////////////////////////////

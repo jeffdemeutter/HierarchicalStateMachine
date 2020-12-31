@@ -23,7 +23,7 @@ public:
 	SteeringPlugin_Output Update(float deltaT, const AgentInfo& agent);
 	void SetDecisionMaking(FiniteStateMachine* decisionMakingStructure);
 
-	void SetToVisited(const HouseInfo& house);
+	void SetHouseToVisited(const HouseInfo& house);
 	bool CheckVisitedRecently(const HouseInfo& house);
 
 	float GetTimer() const;
@@ -51,6 +51,6 @@ private:
 
 	float m_Timer = 0.f;
 
-	std::vector<House> m_Houses;
+	std::vector<House> m_vHouses;
 };
 

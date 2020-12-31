@@ -33,6 +33,7 @@ void Plugin::Initialize(IBaseInterface* pInterface, PluginInfo& info)
 	pBlackboard->AddData("enemy"	, EnemyInfo{});
 	pBlackboard->AddData("vItems"	, deque<EntityInfo>{});
 	pBlackboard->AddData("enemyVec"	, vector<EnemyInfo>{});
+	pBlackboard->AddData("purge"	, PurgeZoneInfo{});
 	pBlackboard->AddData("timer"	, static_cast<float>(0.f));
 	pBlackboard->AddData("kills"	, static_cast<int>(0));
 	pBlackboard->AddData("distance"	, 5.f);
@@ -46,11 +47,11 @@ void Plugin::Initialize(IBaseInterface* pInterface, PluginInfo& info)
 	ReturnToMap*	pReturnToMap	= new ReturnToMap();
 	EvadeState*		pEvadeState		= new EvadeState();
 	Eat*			pEat			= new Eat();
-	RunAway*		pRunAway		= new RunAway();
+	KillFollowers*	pKillFollowers	= new KillFollowers();
 	Heal*			pHeal			= new Heal();
 	Shoot*			pShoot			= new Shoot();
 	FSMState*		pShootOrEvade	= new FSMState();
-	TurnAround*		pTurnAround		= new TurnAround();
+	EscapePurge*	pEscapePurge	= new EscapePurge();
 	
 	m_pStates.push_back(pEnterHouse);
 	m_pStates.push_back(pWanderState);
@@ -59,11 +60,11 @@ void Plugin::Initialize(IBaseInterface* pInterface, PluginInfo& info)
 	m_pStates.push_back(pReturnToMap);
 	m_pStates.push_back(pEvadeState);
 	m_pStates.push_back(pEat);
-	m_pStates.push_back(pRunAway);
+	m_pStates.push_back(pKillFollowers);
 	m_pStates.push_back(pHeal);
 	m_pStates.push_back(pShoot);
 	m_pStates.push_back(pShootOrEvade);
-	m_pStates.push_back(pTurnAround);
+	m_pStates.push_back(pEscapePurge);
 
 	// ===================================================================
 	// Create transitions
@@ -85,7 +86,9 @@ void Plugin::Initialize(IBaseInterface* pInterface, PluginInfo& info)
 	GotKill*			pGotKill			= new GotKill();
 	HasNoBullets*		pHasNoBullets		= new HasNoBullets();
 	HasBullets*			pHasBullets			= new HasBullets();
-	LowStamina*			pLowStamina			= new LowStamina();
+	InPurgeZone*		pInPurgeZone		= new InPurgeZone();
+	NotInPurge*			pNotInPurge			= new NotInPurge();
+	EnemyTooClose*		pEnemyTooClose		= new EnemyTooClose();
 
 	m_pTransitions.push_back(pHouseInFov);
 	m_pTransitions.push_back(pItemInFov);
@@ -105,7 +108,9 @@ void Plugin::Initialize(IBaseInterface* pInterface, PluginInfo& info)
 	m_pTransitions.push_back(pHasNoBullets);
 	m_pTransitions.push_back(pGotKill);
 	m_pTransitions.push_back(pHasBullets);
-	m_pTransitions.push_back(pLowStamina);
+	m_pTransitions.push_back(pInPurgeZone);
+	m_pTransitions.push_back(pNotInPurge);
+	m_pTransitions.push_back(pEnemyTooClose);
 
 
 	// ===================================================================
@@ -119,6 +124,7 @@ void Plugin::Initialize(IBaseInterface* pInterface, PluginInfo& info)
 	pFSM->AddTransition(pWanderState	, pPickupItem	, pItemInFov		);
 	pFSM->AddTransition(pEnterHouse		, pPickupItem	, pItemInFov		);
 	pFSM->AddTransition(pEscapeHouse	, pPickupItem	, pItemInFov		);
+	pFSM->AddTransition(pReturnToMap	, pPickupItem	, pItemInFov		);
 	pFSM->AddTransition(pPickupItem		, pEscapeHouse	, pPickedUpAll		);
 
 	pFSM->AddTransition(pEnterHouse		, pWanderState	, pVisitedHouse		);
@@ -131,29 +137,27 @@ void Plugin::Initialize(IBaseInterface* pInterface, PluginInfo& info)
 
 	//		choose from evade or kill
 	pFSM->AddTransition(pWanderState	, pShootOrEvade	, pEnemyInFov		);
-	pFSM->AddTransition(pEnterHouse		, pShootOrEvade	, pEnemyInFov		);
 	pFSM->AddTransition(pReturnToMap	, pShootOrEvade	, pEnemyInFov		);
 	pFSM->AddTransition(pEscapeHouse	, pShootOrEvade	, pEnemyInFov		);
 	pFSM->AddTransition(pPickupItem		, pShootOrEvade	, pEnemyInFov		);
+	pFSM->AddTransition(pKillFollowers	, pShootOrEvade	, pEnemyInFov		);
+
+	pFSM->AddTransition(pKillFollowers	, pWanderState	, pTimer			);
+	pFSM->AddTransition(pWanderState	, pKillFollowers, pWasHit			);
 	//		shoot
 	pFSM->AddTransition(pShootOrEvade	, pShoot		, pHasBullets		);
 	pFSM->AddTransition(pShoot			, pWanderState	, pNoEnemyInFov		);
 	pFSM->AddTransition(pShoot			, pWanderState	, pGotKill			);
+	pFSM->AddTransition(pShoot			, pWanderState	, pEnemyTooClose	);
 	//		evade
 	pFSM->AddTransition(pShootOrEvade	, pEvadeState	, pHasNoBullets		);
 	pFSM->AddTransition(pEvadeState		, pWanderState	, pTimer			);
-
-
-	//		Run Away
-	pFSM->AddTransition(pWanderState	, pRunAway		, pWasHit			);
-	pFSM->AddTransition(pReturnToMap	, pRunAway		, pWasHit			);
-	pFSM->AddTransition(pEscapeHouse	, pRunAway		, pWasHit			);
-
-
-	pFSM->AddTransition(pRunAway		, pTurnAround	, pLowStamina		);
-	pFSM->AddTransition(pRunAway		, pWanderState	, pTimer			);
-
-	pFSM->AddTransition(pTurnAround		, pShootOrEvade	, pEnemyInFov		);
+	
+	// purge zone stuff
+	pFSM->AddTransition(pWanderState	, pEscapePurge	, pInPurgeZone		);
+	pFSM->AddTransition(pEnterHouse		, pEscapePurge	, pInPurgeZone		);
+	pFSM->AddTransition(pShootOrEvade	, pEscapePurge	, pInPurgeZone		);
+	pFSM->AddTransition(pEscapePurge	, pWanderState	, pNotInPurge		);
 
 	//		Using Utilities
 	pFSM->AddTransition(pWanderState	, pEat			, pHasToEat			);
@@ -186,7 +190,7 @@ void Plugin::InitGameDebugParams(GameDebugParams& params)
 {
 	params.AutoFollowCam = true; //Automatically follow the AI? (Default = true)
 	params.RenderUI = true; //Render the IMGUI Panel? (Default = true)
-	params.SpawnEnemies = false; //Do you want to spawn enemies? (Default = true)
+	params.SpawnEnemies = true; //Do you want to spawn enemies? (Default = true)
 	params.EnemyCount = 20; //How many enemies? (Default = 20)
 	params.GodMode = false; //GodMode > You can't die, can be usefull to inspect certain behaviours (Default = false)
 	params.AutoGrabClosestItem = true; //A call to Item_Grab(...) returns the closest item that can be grabbed. (EntityInfo argument is ignored)
@@ -196,43 +200,6 @@ void Plugin::InitGameDebugParams(GameDebugParams& params)
 //(=Use only for Debug Purposes)
 void Plugin::Update(float dt)
 {
-	//Demo Event Code
-	//In the end your AI should be able to walk around without external input
-	if (m_pInterface->Input_IsMouseButtonUp(Elite::InputMouseButton::eLeft))
-	{
-		//Update target based on input
-		Elite::MouseData mouseData = m_pInterface->Input_GetMouseData(Elite::InputType::eMouseButton, Elite::InputMouseButton::eLeft);
-		const Elite::Vector2 pos = Elite::Vector2(static_cast<float>(mouseData.X), static_cast<float>(mouseData.Y));
-		m_Target = m_pInterface->Debug_ConvertScreenToWorld(pos);
-	}
-	//else if (m_pInterface->Input_IsKeyboardKeyDown(Elite::eScancode_Space))
-	//{
-	//	m_CanRun = true;
-	//}
-	//else if (m_pInterface->Input_IsKeyboardKeyDown(Elite::eScancode_Left))
-	//{
-	//	m_AngSpeed -= Elite::ToRadians(10);
-	//}
-	//else if (m_pInterface->Input_IsKeyboardKeyDown(Elite::eScancode_Right))
-	//{
-	//	m_AngSpeed += Elite::ToRadians(10);
-	//}
-	//else if (m_pInterface->Input_IsKeyboardKeyDown(Elite::eScancode_G))
-	//{
-	//	m_GrabItem = true;
-	//}
-	//else if (m_pInterface->Input_IsKeyboardKeyDown(Elite::eScancode_U))
-	//{
-	//	m_UseItem = true;
-	//}
-	//else if (m_pInterface->Input_IsKeyboardKeyDown(Elite::eScancode_R))
-	//{
-	//	m_RemoveItem = true;
-	//}
-	//else if (m_pInterface->Input_IsKeyboardKeyUp(Elite::eScancode_Space))
-	//{
-	//	m_CanRun = false;
-	//}
 }
 
 //Update
@@ -240,64 +207,29 @@ void Plugin::Update(float dt)
 SteeringPlugin_Output Plugin::UpdateSteering(float dt)
 {
 	//Use the Interface (IAssignmentInterface) to 'interface' with the AI_Framework
-	auto agentInfo = m_pInterface->Agent_GetInfo();
+	//auto agentInfo = m_pInterface->Agent_GetInfo();
 
-	auto nextTargetPos = m_Target; //To start you can use the mouse position as guidance
+	//auto nextTargetPos = m_Target; //To start you can use the mouse position as guidance
 
-	auto vHousesInFOV = GetHousesInFOV();//uses m_pInterface->Fov_GetHouseByIndex(...)
-	auto vEntitiesInFOV = GetEntitiesInFOV(); //uses m_pInterface->Fov_GetEntityByIndex(...)
+	//auto vHousesInFOV = GetHousesInFOV();//uses m_pInterface->Fov_GetHouseByIndex(...)
+	//auto vEntitiesInFOV = GetEntitiesInFOV(); //uses m_pInterface->Fov_GetEntityByIndex(...)
 
-	for (auto& e : vEntitiesInFOV)
-	{
-		if (e.Type == eEntityType::PURGEZONE)
-		{
-			PurgeZoneInfo zoneInfo;
-			m_pInterface->PurgeZone_GetInfo(e, zoneInfo);
-			std::cout << "Purge Zone in FOV:" << e.Location.x << ", "<< e.Location.y <<  " ---EntityHash: " << e.EntityHash << "---Radius: "<< zoneInfo.Radius << std::endl;
-		}
-	}
-	
-
-	//INVENTORY USAGE DEMO
-	//********************
-	//if (m_GrabItem)
+	//for (auto& e : vEntitiesInFOV)
 	//{
-	//	ItemInfo item;
-	//	//Item_Grab > When DebugParams.AutoGrabClosestItem is TRUE, the Item_Grab function returns the closest item in range
-	//	//Keep in mind that DebugParams are only used for debugging purposes, by default this flag is FALSE
-	//	//Otherwise, use GetEntitiesInFOV() to retrieve a vector of all entities in the FOV (EntityInfo)
-	//	//Item_Grab gives you the ItemInfo back, based on the passed EntityHash (retrieved by GetEntitiesInFOV)
-	//	if (m_pInterface->Item_Grab({}, item))
+	//	if (e.Type == eEntityType::PURGEZONE)
 	//	{
-	//		//Once grabbed, you can add it to a specific inventory slot
-	//		//Slot must be empty
-	//		m_pInterface->Inventory_AddItem(0, item);
+	//		PurgeZoneInfo zoneInfo;
+	//		m_pInterface->PurgeZone_GetInfo(e, zoneInfo);
+	//		std::cout << "Purge Zone in FOV:" << e.Location.x << ", "<< e.Location.y <<  " ---EntityHash: " << e.EntityHash << "---Radius: "<< zoneInfo.Radius << std::endl;
 	//	}
 	//}
 
-	//if (m_UseItem)
-	//{
-	//	//Use an item (make sure there is an item at the given inventory slot)
-	//	m_pInterface->Inventory_UseItem(0);
-	//}
-
-	//if (m_RemoveItem)
-	//{
-	//	//Remove an item from a inventory slot
-	//	m_pInterface->Inventory_RemoveItem(0);
-	//}
-
-		
-	//m_pSteeringAgent->SetToRotate(m_Target);
-	//return m_pSteeringAgent->Update(dt, m_pInterface->Agent_GetInfo());
 	return m_pSteeringAgent->Update(dt, m_pInterface->Agent_GetInfo());
 }
 
 //This function should only be used for rendering debug elements
 void Plugin::Render(float dt) const
 {
-	//This Render function should only contain calls to Interface->Draw_... functions
-	m_pInterface->Draw_SolidCircle(m_Target, .7f, { 0,0 }, { 1, 0, 0 });
 }
 
 vector<HouseInfo> Plugin::GetHousesInFOV() const
