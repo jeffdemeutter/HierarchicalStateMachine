@@ -51,7 +51,7 @@ public:
 	virtual bool ToTransition(Blackboard* pBlackboard) const override;
 };
 
-class IsInVisitedHouse final : public FSMTransition
+class IsInHouse final : public FSMTransition
 {
 public:
 	virtual bool ToTransition(Blackboard* pBlackboard) const override;
@@ -105,25 +105,13 @@ public:
 	virtual bool ToTransition(Blackboard* pBlackboard) const override;
 };
 
-class GotKill final : public FSMTransition
-{
-public:
-	virtual bool ToTransition(Blackboard* pBlackboard) const override;
-};
-
 class HasNoBullets final : public FSMTransition
 {
 public:
 	virtual bool ToTransition(Blackboard* pBlackboard) const override;
 };
 
-class HasBullets final : public FSMTransition
-{
-public:
-	virtual bool ToTransition(Blackboard* pBlackboard) const override;
-};
-
-class LowStamina final : public FSMTransition
+class CanKillEnemies final : public FSMTransition
 {
 public:
 	virtual bool ToTransition(Blackboard* pBlackboard) const override;
@@ -141,11 +129,10 @@ public:
 	virtual bool ToTransition(Blackboard* pBlackboard) const override;
 };
 
-class EnemyTooClose final : public FSMTransition
+class CannotKill final : public FSMTransition
 {
 public:
 	virtual bool ToTransition(Blackboard* pBlackboard) const override;
 };
-
 
 #endif

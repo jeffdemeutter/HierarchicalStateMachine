@@ -62,8 +62,8 @@ SteeringPlugin_Output Rotate::CalculateSteering(float deltaT, const AgentInfo& a
 	else if (desired < -E_PI)
 		desired += E_TAU;
 
-	// multiply desired by some value to make it go as fast as possible (30.f)
-	steering.AngularVelocity = desired * agent.MaxAngularSpeed * 30.f;
+	// multiply desired by some value to make it go as fast as possible (60.f)
+	steering.AngularVelocity = desired * 60.f;
 
 	steering.AutoOrient = false;
 

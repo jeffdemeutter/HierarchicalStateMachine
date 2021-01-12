@@ -4,10 +4,35 @@
 void WanderState::OnEnter(Blackboard* pBlackboard)
 {
 	SteeringAgent* pAgent = nullptr;
+	IExamInterface* pInterface = nullptr;
 	if (!pBlackboard->GetData("agent", pAgent)) return;
-	if (!pAgent) return;
+	if (!pBlackboard->GetData("interface", pInterface)) return;
+	if (!pAgent || !pInterface) return;
 
-	pAgent->SetToWander();
+	const Vector2 worldDim = pInterface->World_GetInfo().Dimensions;
+
+	Vector2 target{ randomFloat(worldDim.x * 2), randomFloat(worldDim.y * 2) };
+	target -= worldDim;
+
+	pBlackboard->ChangeData("target", target);
+
+	pAgent->SetToSeek(pInterface->NavMesh_GetClosestPathPoint(target));
+}
+
+void WanderState::Update(Blackboard* pBlackboard, float deltaTime)
+{
+	SteeringAgent* pAgent = nullptr;
+	IExamInterface* pInterface = nullptr;
+	Vector2 target{};
+	if (!pBlackboard->GetData("agent", pAgent)) return;
+	if (!pBlackboard->GetData("interface", pInterface)) return;
+	if (!pBlackboard->GetData("target", target)) return;
+	if (!pAgent || !pInterface) return;
+
+	if (abs(DistanceSquared(target, pInterface->Agent_GetInfo().Position)) < 10.f)
+		OnEnter(pBlackboard);
+
+	pAgent->SetToSeek(pInterface->NavMesh_GetClosestPathPoint(target));
 }
 
 void ReturnToMap::Update(Blackboard* pBlackboard, float deltaTime)
@@ -61,21 +86,16 @@ void EnterHouse::OnExit(Blackboard* pBlackboard)
 
 void EscapeHouse::OnEnter(Blackboard* pBlackboard)
 {
-	SteeringAgent* pAgent = nullptr;
 	IExamInterface* pInterface = nullptr;
 	HouseInfo house{};
-	if (!pBlackboard->GetData("agent", pAgent))	return;
 	if (!pBlackboard->GetData("interface", pInterface)) return;
 	if (!pBlackboard->GetData("house", house)) return;
 
-	if (!pAgent || !pInterface) return;
+	const float rot{ pInterface->Agent_GetInfo().Orientation - float(E_PI_2) };
+	const Vector2 forward{ GetNormalized(Vector2{cosf(rot), sinf(rot)}) };
 
-	Vector2 temp = pInterface->Agent_GetInfo().Position - house.Center;
-	temp.x /= temp.x;
-	temp.y /= temp.y;
-	temp = temp * house.Size;
-
-	pBlackboard->ChangeData("target", house.Center + temp);
+	// times 200.f just to make sure the target is outside the house
+	pBlackboard->ChangeData("target", house.Center + forward * 200.f);
 }
 
 void EscapeHouse::Update(Blackboard* pBlackboard, float deltaTime)
@@ -86,8 +106,6 @@ void EscapeHouse::Update(Blackboard* pBlackboard, float deltaTime)
 	if (!pBlackboard->GetData("agent", pAgent))	return;
 	if (!pBlackboard->GetData("interface", pInterface)) return;
 	if (!pBlackboard->GetData("target", target)) return;
-
-	if (!pAgent || !pInterface) return;
 
 	pAgent->SetToSeek(pInterface->NavMesh_GetClosestPathPoint(target));
 }
@@ -122,7 +140,7 @@ void PickUpItem::Update(Blackboard* pBlackboard, float deltaTime)
 	const Vector2 agentPos{ pInterface->Agent_GetInfo().Position };
 
 	if (vEntities.size() == 0) return;
-	pAgent->SetToSeek(vEntities[0].Location);
+	pAgent->SetToSeek(pInterface->NavMesh_GetClosestPathPoint(vEntities[0].Location));
 
 	EntityInfo entityInfo;
 	for (int i = 0;; ++i)
@@ -150,12 +168,13 @@ void PickUpItem::Update(Blackboard* pBlackboard, float deltaTime)
 	}
 	// update the deque with possible new items
 	std::sort(vEntities.begin(), vEntities.end(), [&agentPos](const EntityInfo& a, const EntityInfo& b) {
-		return (Distance(agentPos, a.Location) < Distance(agentPos, b.Location));
+		return (DistanceSquared(agentPos, a.Location) < DistanceSquared(agentPos, b.Location));
 	});
 	pBlackboard->ChangeData("vItems", vEntities);
 
 	// check if its in grab range
-	if (Distance(vEntities[0].Location, agentPos) > pInterface->Agent_GetInfo().GrabRange)
+	const float grabRange{ pInterface->Agent_GetInfo().GrabRange };
+	if (DistanceSquared(vEntities[0].Location, agentPos) > (grabRange * grabRange))
 		return;
 
 	// replace the item
@@ -272,7 +291,7 @@ void EvadeState::Update(Blackboard* pBlackboard, float deltaTime)
 	if (!pAgent || !pInterface) return;
 
 
-	static const float distCheck{ 8.f };
+	static const float distCheckSqr{ 8.f * 8.f };
 	const float angle{ pInterface->Agent_GetInfo().FOV_Angle / 2.f };
 	const Vector2 agentPos = pInterface->Agent_GetInfo().Position;
 	// calculate the three points to check if theyre safe
@@ -286,11 +305,11 @@ void EvadeState::Update(Blackboard* pBlackboard, float deltaTime)
 	bool isRightSafe = true;
 	for (auto& enemy : enemyVec)
 	{
-		if (isLeftSafe && Distance(enemy.Location, agentPos + dPointLeft) < distCheck)
+		if (isLeftSafe && DistanceSquared(enemy.Location, agentPos + dPointLeft) < distCheckSqr)
 			isLeftSafe = false;
-		if (isMiddleSafe && Distance(enemy.Location, agentPos + dPointMiddle) < distCheck)
+		if (isMiddleSafe && DistanceSquared(enemy.Location, agentPos + dPointMiddle) < distCheckSqr)
 			isMiddleSafe = false;
-		if (isRightSafe && Distance(enemy.Location, agentPos + dPointRight) < distCheck)
+		if (isRightSafe && DistanceSquared(enemy.Location, agentPos + dPointRight) < distCheckSqr)
 			isRightSafe = false;
 	}
 
@@ -358,9 +377,6 @@ void Shoot::Update(Blackboard* pBlackboard, float deltaTime)
 
 	pAgent->SetToRotate(enemyInfo.Location);
 
-	pInterface->Draw_Segment(pInterface->Agent_GetInfo().Position, enemyInfo.Location, { 1.f, 0.f, 0.f });
-	pInterface->Draw_Segment(pInterface->Agent_GetInfo().Position, pInterface->Agent_GetInfo().Position + pInterface->Agent_GetInfo().LinearVelocity, { 0.f, 1.f, 0.f });
-
 	EntityInfo entityInfo{};
 	for (int i = 0;; ++i)
 	{
@@ -381,29 +397,28 @@ void Shoot::Update(Blackboard* pBlackboard, float deltaTime)
 	// direction vector of agent
 	const Vector2 forward{ GetNormalized(Vector2{cosf(rot), sinf(rot)}) };
 	// vector from agent towards enemy
+
 	const Vector2 toEnemy{ GetNormalized(enemyInfo.Location - pInterface->Agent_GetInfo().Position) };
 	const float canShoot{ Dot(toEnemy, forward) };
-	
-	pInterface->Draw_Segment(pInterface->Agent_GetInfo().Position, pInterface->Agent_GetInfo().Position + (forward * pInterface->Agent_GetInfo().MaxLinearSpeed), { 0.0f, 1.f, 0.f });
-	pInterface->Draw_Segment(pInterface->Agent_GetInfo().Position, pInterface->Agent_GetInfo().Position + (toEnemy * pInterface->Agent_GetInfo().MaxLinearSpeed), {1.0f, 0.f, 0.f});
-
-	const float dist = Distance(pInterface->Agent_GetInfo().Position, enemyInfo.Location);
-
 	if (canShoot > 0.999f)
 	{
 		ItemInfo pistol{};
 		// pistol 1 ammo
 		int weaponAmmo1{ 0 };
-		int weaponAmmo2{ 0 };
-		pInterface->Inventory_GetItem(0, pistol);
-		weaponAmmo1 = pInterface->Weapon_GetAmmo(pistol);
-		if (weaponAmmo1 == 0)
-			pInterface->Inventory_RemoveItem(0);
+		if (pInterface->Inventory_GetItem(0, pistol))
+		{
+			weaponAmmo1 = pInterface->Weapon_GetAmmo(pistol);
+			if (weaponAmmo1 == 0)
+				pInterface->Inventory_RemoveItem(0);
+		}
 		// pistol 2 ammo
-		pInterface->Inventory_GetItem(1, pistol);
-		weaponAmmo2 = pInterface->Weapon_GetAmmo(pistol);
-		if (weaponAmmo2 == 0)
-			pInterface->Inventory_RemoveItem(1);
+		int weaponAmmo2{ 0 };
+		if (pInterface->Inventory_GetItem(1, pistol))
+		{
+			weaponAmmo2 = pInterface->Weapon_GetAmmo(pistol);
+			if (weaponAmmo2 == 0)
+				pInterface->Inventory_RemoveItem(1);
+		}
 
 		if (weaponAmmo1 != 0)
 			pInterface->Inventory_UseItem(0);
@@ -441,4 +456,14 @@ void EscapePurge::Update(Blackboard* pBlackboard, float deltaTime)
 	const Vector2 target = (pInterface->Agent_GetInfo().Position - purgeZone.Center);
 
 	pAgent->SetToSeek(pInterface->NavMesh_GetClosestPathPoint( target ));
+}
+
+void ShootOrEvade::OnEnter(Blackboard* pBlackboard)
+{
+	SteeringAgent* pAgent = nullptr;
+	if (!pBlackboard->GetData("agent", pAgent)) return;
+	pAgent->ResetTimer();
+
+	float timer = 1.5f;
+	pBlackboard->ChangeData("timer", timer);
 }

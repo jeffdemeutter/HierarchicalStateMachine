@@ -18,6 +18,7 @@ class WanderState final : public FSMState
 public:
 	WanderState() : FSMState() {};
 	virtual void OnEnter(Blackboard* pBlackboard) override;
+	virtual void Update(Blackboard* pBlackboard, float deltaTime) override;
 };
 
 class EvadeState final : public FSMState
@@ -97,4 +98,11 @@ public:
 	virtual void OnEnter(Blackboard* pBlackboard) override;
 	virtual void OnExit(Blackboard* pBlackboard) override;
 	virtual void Update(Blackboard* pBlackboard, float deltaTime) override;
+};
+
+class ShootOrEvade final : public FSMState
+{
+public:
+	ShootOrEvade() : FSMState() {}
+	virtual void OnEnter(Blackboard* pBlackboard) override;
 };

@@ -7,11 +7,9 @@ bool HouseInFov::ToTransition(Blackboard* pBlackboard) const
 	IExamInterface* pInterface = nullptr;
 	if (!pBlackboard->GetData("agent", pAgent))	return false;
 	if (!pBlackboard->GetData("interface", pInterface)) return false;
-	if (!pInterface) return false;
 
-	UINT idx = 0;
 	HouseInfo houseInfo;
-	if (pInterface->Fov_GetHouseByIndex(idx, houseInfo))
+	if (pInterface->Fov_GetHouseByIndex(0, houseInfo))
 	{
 		if (pAgent->CheckVisitedRecently(houseInfo))
 			return false;
@@ -52,8 +50,7 @@ bool PickedUpAll::ToTransition(Blackboard* pBlackboard) const
 	deque<EntityInfo> vEntities;
 	pBlackboard->GetData("vItems", vEntities);
 
-	bool d = (vEntities.size() == 0);
-	return d;
+	return (vEntities.size() == 0);
 }
 
 bool VisitedHouse::ToTransition(Blackboard* pBlackboard) const
@@ -66,7 +63,8 @@ bool VisitedHouse::ToTransition(Blackboard* pBlackboard) const
 	if (!pBlackboard->GetData("house", house)) return false;
 	if (!pAgent || !pInterface) return false;
 
-	if (Distance(pInterface->Agent_GetInfo().Position, house.Center) < 2.f)
+	// distancesqr 10.f is roughly 3.f distance
+	if (DistanceSquared(pInterface->Agent_GetInfo().Position, house.Center) < 10.f)
 	{
 		pBlackboard->ChangeData("target", house.Center + house.Size);
 		pAgent->SetHouseToVisited(house);
@@ -76,20 +74,13 @@ bool VisitedHouse::ToTransition(Blackboard* pBlackboard) const
 	return false;
 }
 
-bool IsInVisitedHouse::ToTransition(Blackboard* pBlackboard) const
+bool IsInHouse::ToTransition(Blackboard* pBlackboard) const
 {
-	SteeringAgent* pAgent = nullptr;
 	IExamInterface* pInterface = nullptr;
-	HouseInfo house;
-	if (!pBlackboard->GetData("agent", pAgent))	return false;
 	if (!pBlackboard->GetData("interface", pInterface)) return false;
-	if (!pBlackboard->GetData("house", house)) return false;
-	if (!pAgent || !pInterface) return false;
+	if (!pInterface) return false;
 
-	if (pInterface->Agent_GetInfo().IsInHouse)
-		return true;
-
-	return false;
+	return (pInterface->Agent_GetInfo().IsInHouse);
 }
 
 bool IsNotInHouse::ToTransition(Blackboard* pBlackboard) const
@@ -105,7 +96,6 @@ bool OutsideMap::ToTransition(Blackboard* pBlackboard) const
 {
 	IExamInterface* pInterface = nullptr;
 	if (!pBlackboard->GetData("interface", pInterface)) return false;
-	if (!pInterface) return false;
 
 	const WorldInfo map = pInterface->World_GetInfo();
 	Vector2 pos = pInterface->Agent_GetInfo().Position;
@@ -119,7 +109,6 @@ bool InsideMap::ToTransition(Blackboard* pBlackboard) const
 	Vector2 target;
 	if (!pBlackboard->GetData("interface", pInterface)) return false;
 	if (!pBlackboard->GetData("target", target)) return false;
-	if (!pInterface) return false;
 
 	WorldInfo map = pInterface->World_GetInfo();
 	Vector2 pos = pInterface->Agent_GetInfo().Position;
@@ -133,7 +122,6 @@ bool EnemyInFov::ToTransition(Blackboard* pBlackboard) const
 	IExamInterface* pInterface = nullptr;
 	if (!pBlackboard->GetData("agent", pAgent)) return false;
 	if (!pBlackboard->GetData("interface", pInterface)) return false;
-	if (!pAgent || !pInterface) return false;
 
 	EntityInfo entityInfo;
 	for (int i = 0;; ++i)
@@ -150,18 +138,17 @@ bool EnemyInFov::ToTransition(Blackboard* pBlackboard) const
 		pInterface->Enemy_GetInfo(entityInfo, enemyInfo);
 
 		pBlackboard->ChangeData("enemy", enemyInfo);
-
 		pBlackboard->ChangeData("timer", 0.5f);
 		pAgent->ResetTimer();
 		return true;
 	}
+	return false;
 }
 
 bool NoEnemyInFov::ToTransition(Blackboard* pBlackboard) const
 {
 	IExamInterface* pInterface = nullptr;
 	if (!pBlackboard->GetData("interface", pInterface)) return false;
-	if (!pInterface) return false;
 
 	// loop over the enemies inside the fov
 	EntityInfo entityInfo{};
@@ -183,12 +170,9 @@ bool NoEnemyInFov::ToTransition(Blackboard* pBlackboard) const
 bool Timer::ToTransition(Blackboard* pBlackboard) const
 {
 	SteeringAgent* pAgent = nullptr;
-	IExamInterface* pInterface = nullptr;
 	float timer = 0.f;
 	if (!pBlackboard->GetData("agent", pAgent)) return false;
-	if (!pBlackboard->GetData("interface", pInterface)) return false;
 	if (!pBlackboard->GetData("timer", timer)) return false;
-	if (!pAgent || !pInterface) return false;
 
 	return pAgent->GetTimer() > timer;
 }
@@ -202,7 +186,7 @@ bool HasToEat::ToTransition(Blackboard* pBlackboard) const
 	if (pInterface->Inventory_GetItem(3, itemInfo))
 		if (10.f - pInterface->Agent_GetInfo().Energy > pInterface->Food_GetEnergy(itemInfo))
 			return true;
-	
+
 	return false;
 } 
 
@@ -213,9 +197,21 @@ bool WasHit::ToTransition(Blackboard* pBlackboard) const
 	if (!pBlackboard->GetData("agent", pAgent)) return false;
 	if (!pBlackboard->GetData("interface", pInterface)) return false;
 
+	//check for the first gun
+	ItemInfo itemInfo{};
+	int bullets{ 0 };
+	if (pInterface->Inventory_GetItem(0, itemInfo))
+		bullets += pInterface->Weapon_GetAmmo(itemInfo);
+	// check for the second gun
+	if (pInterface->Inventory_GetItem(1, itemInfo))
+		bullets += pInterface->Weapon_GetAmmo(itemInfo);
+
+	if (bullets == 0)
+		return false;
+
 	if (pInterface->Agent_GetInfo().WasBitten)
 	{
-		pBlackboard->ChangeData("timer", 1.f);
+		pBlackboard->ChangeData("timer", 1.2f);
 		pAgent->ResetTimer();
 
 		return true;
@@ -236,25 +232,6 @@ bool HasToHeal::ToTransition(Blackboard* pBlackboard) const
 	return false;
 }
 
-bool GotKill::ToTransition(Blackboard* pBlackboard) const
-{
-	IExamInterface* pInterface = nullptr;
-	if (!pBlackboard->GetData("interface", pInterface)) return false;
-	// get previous frame killNum
-	int kills = 0;
-	pBlackboard->GetData("kills", kills);
-
-	// check if killNum has changed this frame
-	if (pInterface->World_GetStats().NumEnemiesKilled != kills)
-	{
-		pBlackboard->ChangeData("kills", pInterface->World_GetStats().NumEnemiesKilled);
-		return true;
-	}
-	
-	// still the same
-	return false;
-}
-
 bool HasNoBullets::ToTransition(Blackboard* pBlackboard) const
 {
 	IExamInterface* pInterface = nullptr;
@@ -269,10 +246,10 @@ bool HasNoBullets::ToTransition(Blackboard* pBlackboard) const
 	if (pInterface->Inventory_GetItem(1, itemInfo))
 		bullets += pInterface->Weapon_GetAmmo(itemInfo);
 
-	return (bullets < 3);
+	return (bullets == 0);
 }
 
-bool HasBullets::ToTransition(Blackboard* pBlackboard) const
+bool CanKillEnemies::ToTransition(Blackboard* pBlackboard) const
 {
 	IExamInterface* pInterface = nullptr;
 	if (!pBlackboard->GetData("interface", pInterface)) return false;
@@ -295,7 +272,6 @@ bool InPurgeZone::ToTransition(Blackboard* pBlackboard) const
 	IExamInterface* pInterface = nullptr;
 	if (!pBlackboard->GetData("agent", pAgent)) return false;
 	if (!pBlackboard->GetData("interface", pInterface)) return false;
-	if (!pAgent || !pInterface) return false;
 
 	EntityInfo entityInfo;
 	for (int i = 0;; ++i)
@@ -338,15 +314,19 @@ bool NotInPurge::ToTransition(Blackboard* pBlackboard) const
 	}
 }
 
-bool EnemyTooClose::ToTransition(Blackboard* pBlackboard) const
+bool CannotKill::ToTransition(Blackboard* pBlackboard) const
 {
 	IExamInterface* pInterface = nullptr;
-	EnemyInfo enemyInfo{};
 	if (!pBlackboard->GetData("interface", pInterface)) return false;
-	if (!pBlackboard->GetData("enemy", enemyInfo)) return false;
-	if (!pInterface) return false;
 
-	// returns true if enemy is within 5.f radius
-	return (Distance(pInterface->Agent_GetInfo().Position, enemyInfo.Location) < 5.f);
+	//check for the first gun
+	ItemInfo itemInfo{};
+	int bullets{ 0 };
+	if (pInterface->Inventory_GetItem(0, itemInfo))
+		bullets += pInterface->Weapon_GetAmmo(itemInfo);
+	// check for the second gun
+	if (pInterface->Inventory_GetItem(1, itemInfo))
+		bullets += pInterface->Weapon_GetAmmo(itemInfo);
+
+	return (bullets == 0);
 }
-

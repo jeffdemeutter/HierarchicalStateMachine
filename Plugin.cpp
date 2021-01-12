@@ -50,7 +50,7 @@ void Plugin::Initialize(IBaseInterface* pInterface, PluginInfo& info)
 	KillFollowers*	pKillFollowers	= new KillFollowers();
 	Heal*			pHeal			= new Heal();
 	Shoot*			pShoot			= new Shoot();
-	FSMState*		pShootOrEvade	= new FSMState();
+	ShootOrEvade*	pShootOrEvade	= new ShootOrEvade();
 	EscapePurge*	pEscapePurge	= new EscapePurge();
 	
 	m_pStates.push_back(pEnterHouse);
@@ -72,23 +72,23 @@ void Plugin::Initialize(IBaseInterface* pInterface, PluginInfo& info)
 	ItemInFov*			pItemInFov			= new ItemInFov();
 	PickedUpAll*		pPickedUpAll		= new PickedUpAll();
 	VisitedHouse*		pVisitedHouse		= new VisitedHouse();
-	IsInVisitedHouse*	pIsInVisitedHouse	= new IsInVisitedHouse();
+	IsInHouse*			pIsInVisitedHouse	= new IsInHouse();
 	IsNotInHouse*		pIsNotInHouse		= new IsNotInHouse();
 	OutsideMap*			pOutsideMap			= new OutsideMap();
 	InsideMap*			pInsideMap			= new InsideMap();
 	EnemyInFov*			pEnemyInFov			= new EnemyInFov();
 	NoEnemyInFov*		pNoEnemyInFov		= new NoEnemyInFov();
 	Timer*				pTimer				= new Timer();
+	Timer*				pTimerSOE			= new Timer();
 	Play1Frame*			pPlay1Frame			= new Play1Frame();
 	HasToEat*			pHasToEat			= new HasToEat();
 	WasHit*				pWasHit				= new WasHit();
 	HasToHeal*			pHasToHeal			= new HasToHeal();
-	GotKill*			pGotKill			= new GotKill();
 	HasNoBullets*		pHasNoBullets		= new HasNoBullets();
-	HasBullets*			pHasBullets			= new HasBullets();
+	CanKillEnemies*		pCanKillEnemies		= new CanKillEnemies();
 	InPurgeZone*		pInPurgeZone		= new InPurgeZone();
 	NotInPurge*			pNotInPurge			= new NotInPurge();
-	EnemyTooClose*		pEnemyTooClose		= new EnemyTooClose();
+	CannotKill*			pCannotKill			= new CannotKill();
 
 	m_pTransitions.push_back(pHouseInFov);
 	m_pTransitions.push_back(pItemInFov);
@@ -106,11 +106,10 @@ void Plugin::Initialize(IBaseInterface* pInterface, PluginInfo& info)
 	m_pTransitions.push_back(pWasHit);
 	m_pTransitions.push_back(pHasToHeal);
 	m_pTransitions.push_back(pHasNoBullets);
-	m_pTransitions.push_back(pGotKill);
-	m_pTransitions.push_back(pHasBullets);
+	m_pTransitions.push_back(pCanKillEnemies);
 	m_pTransitions.push_back(pInPurgeZone);
 	m_pTransitions.push_back(pNotInPurge);
-	m_pTransitions.push_back(pEnemyTooClose);
+	m_pTransitions.push_back(pCannotKill);
 
 
 	// ===================================================================
@@ -120,6 +119,15 @@ void Plugin::Initialize(IBaseInterface* pInterface, PluginInfo& info)
 	// Apply Transitions
 	pFSM->AddTransition(pWanderState	, pEnterHouse	, pHouseInFov		);
 
+	//		wander
+	pFSM->AddTransition(pKillFollowers	, pWanderState	, pTimer			);
+	pFSM->AddTransition(pShoot			, pWanderState	, pNoEnemyInFov		);
+	pFSM->AddTransition(pShoot			, pWanderState	, pHasNoBullets		);
+	pFSM->AddTransition(pShootOrEvade	, pWanderState	, pTimerSOE			);
+	pFSM->AddTransition(pEvadeState		, pWanderState	, pTimer			);
+	pFSM->AddTransition(pEscapeHouse	, pWanderState	, pIsNotInHouse		);
+	pFSM->AddTransition(pReturnToMap	, pWanderState	, pInsideMap		);
+
 	//		pickup stuff
 	pFSM->AddTransition(pWanderState	, pPickupItem	, pItemInFov		);
 	pFSM->AddTransition(pEnterHouse		, pPickupItem	, pItemInFov		);
@@ -127,13 +135,10 @@ void Plugin::Initialize(IBaseInterface* pInterface, PluginInfo& info)
 	pFSM->AddTransition(pReturnToMap	, pPickupItem	, pItemInFov		);
 	pFSM->AddTransition(pPickupItem		, pEscapeHouse	, pPickedUpAll		);
 
-	pFSM->AddTransition(pEnterHouse		, pWanderState	, pVisitedHouse		);
+	pFSM->AddTransition(pEnterHouse		, pEscapeHouse	, pVisitedHouse		);
 	pFSM->AddTransition(pWanderState	, pEscapeHouse	, pIsInVisitedHouse	);
-	pFSM->AddTransition(pEscapeHouse	, pWanderState	, pIsNotInHouse		);
 
 	pFSM->AddTransition(pWanderState	, pReturnToMap	, pOutsideMap		);
-	pFSM->AddTransition(pReturnToMap	, pWanderState	, pInsideMap		);
-
 
 	//		choose from evade or kill
 	pFSM->AddTransition(pWanderState	, pShootOrEvade	, pEnemyInFov		);
@@ -142,18 +147,15 @@ void Plugin::Initialize(IBaseInterface* pInterface, PluginInfo& info)
 	pFSM->AddTransition(pPickupItem		, pShootOrEvade	, pEnemyInFov		);
 	pFSM->AddTransition(pKillFollowers	, pShootOrEvade	, pEnemyInFov		);
 
-	pFSM->AddTransition(pKillFollowers	, pWanderState	, pTimer			);
 	pFSM->AddTransition(pWanderState	, pKillFollowers, pWasHit			);
+	pFSM->AddTransition(pEscapeHouse	, pKillFollowers, pWasHit			);
+	pFSM->AddTransition(pReturnToMap	, pKillFollowers, pWasHit			);
 	//		shoot
-	pFSM->AddTransition(pShootOrEvade	, pShoot		, pHasBullets		);
-	pFSM->AddTransition(pShoot			, pWanderState	, pNoEnemyInFov		);
-	pFSM->AddTransition(pShoot			, pWanderState	, pGotKill			);
-	pFSM->AddTransition(pShoot			, pWanderState	, pEnemyTooClose	);
+	pFSM->AddTransition(pShootOrEvade	, pShoot		, pCanKillEnemies	);
 	//		evade
-	pFSM->AddTransition(pShootOrEvade	, pEvadeState	, pHasNoBullets		);
-	pFSM->AddTransition(pEvadeState		, pWanderState	, pTimer			);
+	pFSM->AddTransition(pShootOrEvade	, pEvadeState	, pCannotKill		);
 	
-	// purge zone stuff
+	//		purge zone stuff
 	pFSM->AddTransition(pWanderState	, pEscapePurge	, pInPurgeZone		);
 	pFSM->AddTransition(pEnterHouse		, pEscapePurge	, pInPurgeZone		);
 	pFSM->AddTransition(pShootOrEvade	, pEscapePurge	, pInPurgeZone		);

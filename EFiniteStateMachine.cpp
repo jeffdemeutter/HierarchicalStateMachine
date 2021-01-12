@@ -59,6 +59,7 @@ void Elite::FiniteStateMachine::SetState(FSMState* newState)
     m_pCurrentState = newState;
     if (m_pCurrentState)
     {
+        std::cout << "                                                                                                                                                                         ";
         std::cout << std::endl << "Entering state: " << typeid(*m_pCurrentState).name() << std::endl;
         m_pCurrentState->OnEnter(m_pBlackboard);
     }
