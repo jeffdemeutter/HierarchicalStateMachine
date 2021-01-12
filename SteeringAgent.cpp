@@ -3,20 +3,15 @@
 
 
 SteeringAgent::SteeringAgent()
-	: m_pWander{ new Wander() }
-	, m_pSeek{ new Seek() }
-	, m_pFlee{ new Flee() }
+	: m_pSeek{ new Seek() }
 	, m_pRotate{ new Rotate() }
 {
-	SetToWander();
 }
 
 SteeringAgent::~SteeringAgent()
 {
 	SAFE_DELETE(m_pDecisionMaking);
-	SAFE_DELETE(m_pWander);
 	SAFE_DELETE(m_pSeek);
-	SAFE_DELETE(m_pFlee);
 	SAFE_DELETE(m_pRotate);
 	SAFE_DELETE(m_pSteeringBehaviour);
 }
@@ -92,22 +87,12 @@ void SteeringAgent::CanRun(bool canRun)
 	m_CanRun = canRun;
 }
 
-void SteeringAgent::SetToWander()
-{
-	m_pSteeringBehaviour = m_pWander;
-}
-
 void SteeringAgent::SetToSeek(const Vector2& seekTarget)
 {
 	m_pSteeringBehaviour = m_pSeek;
 	m_pSteeringBehaviour->SetTarget(seekTarget);
 }
 
-void SteeringAgent::SetToFlee(const Vector2& evadeTarget)
-{
-	m_pSteeringBehaviour = m_pFlee;
-	m_pSteeringBehaviour->SetTarget(evadeTarget);
-}
 
 void SteeringAgent::SetToRotate(const Vector2& rotateTowards)
 {

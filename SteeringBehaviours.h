@@ -27,10 +27,8 @@ protected:
 	TargetData m_Target;
 };
 
-///////////////////////////////////////
 //SEEK
-//****
-class Seek : public SteeringBehavior
+class Seek final : public SteeringBehavior
 {
 public:
 	Seek() = default;
@@ -40,44 +38,7 @@ public:
 	virtual SteeringPlugin_Output CalculateSteering(float deltaT, const AgentInfo& agent) override;
 };
 
-//////////////////////////
-//WANDER
-//******
-class Wander final : public Seek
-{
-public:
-	Wander() = default;
-	virtual ~Wander() = default;
-
-	//Wander Behavior
-	virtual SteeringPlugin_Output CalculateSteering(float deltaT, const AgentInfo& agent) override;
-
-	void SetWanderOffset(float offset) { m_Offset = offset; };
-	void SetWanderRadius(float radius) { m_Radius = radius; };
-
-protected:
-	float m_WalkDelta = 0.f;
-	const float m_DeltaMultiplier = 0.1f;
-	float m_Offset = 10.f;
-	float m_Radius = 3.f;
-};
-
-///////////////////////////////////////
-//FLEE
-//****
-class Flee final : public Seek
-{
-public:
-	Flee() = default;
-	virtual ~Flee() = default;
-
-	//Seek Behaviour
-	virtual SteeringPlugin_Output CalculateSteering(float deltaT, const AgentInfo& agent) override;
-};
-
-///////////////////////////////////////
 //Rotate
-//****
 class Rotate final : public SteeringBehavior
 {
 public:
@@ -87,3 +48,4 @@ public:
 	//Seek Behaviour
 	virtual SteeringPlugin_Output CalculateSteering(float deltaT, const AgentInfo& agent) override;
 };
+

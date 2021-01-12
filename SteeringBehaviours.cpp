@@ -13,38 +13,7 @@ SteeringPlugin_Output Seek::CalculateSteering(float deltaT, const AgentInfo& age
 	steering.AutoOrient = true;
 
 	return steering;
-}
-
-
-SteeringPlugin_Output Wander::CalculateSteering(float deltaT, const AgentInfo& agent)
-{
-	// find center of circle
-	Elite::Vector2 direction = agent.LinearVelocity.GetNormalized();
-	if (direction == Elite::ZeroVector2)
-		direction = Elite::UnitVector2;
-	const Elite::Vector2 center{ agent.Position + direction * m_Offset };
-
-	// random walk
-	m_WalkDelta += (Elite::randomFloat(m_Radius * 2) - m_Radius) * m_DeltaMultiplier;
-	const float x = cos(m_WalkDelta) * m_Radius;
-	const float y = sin(m_WalkDelta) * m_Radius;
-
-	m_Target = center + Elite::Vector2{ x, y };
-
-	return Seek::CalculateSteering(deltaT, agent);
-}                                                                                                                                                                                                       
-
-SteeringPlugin_Output Flee::CalculateSteering(float deltaT, const AgentInfo& agent)
-{
-	SteeringPlugin_Output steering{};
-
-	steering = Seek::CalculateSteering(deltaT, agent);
-	steering.LinearVelocity *= -1;
-
-	steering.AutoOrient = true;
-
-	return steering;
-}
+}                                                                                                                                                                                                     
 
 SteeringPlugin_Output Rotate::CalculateSteering(float deltaT, const AgentInfo& agent)
 {
@@ -52,7 +21,6 @@ SteeringPlugin_Output Rotate::CalculateSteering(float deltaT, const AgentInfo& a
 	SteeringPlugin_Output steering{};
 
 	const Elite::Vector2 toTarget{ m_Target - agent.Position };
-
 	const float to{ atan2f(toTarget.y, toTarget.x) + float(E_PI_2) };
 	float from = atan2f(sinf(agent.Orientation), cosf(agent.Orientation));
 	float desired = to - from;
@@ -66,6 +34,5 @@ SteeringPlugin_Output Rotate::CalculateSteering(float deltaT, const AgentInfo& a
 	steering.AngularVelocity = desired * 60.f;
 
 	steering.AutoOrient = false;
-
 	return steering;
 }

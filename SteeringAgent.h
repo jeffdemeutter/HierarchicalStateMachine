@@ -30,9 +30,7 @@ public:
 	void ResetTimer();
 	void CanRun(bool canRun);
 
-	void SetToWander();
 	void SetToSeek(const Vector2& seekTarget);
-	void SetToFlee(const Vector2& evadeTarget);
 	void SetToRotate(const Vector2& rotateTowards);
 private:
 	FiniteStateMachine* m_pDecisionMaking = nullptr;
@@ -40,9 +38,7 @@ private:
 	// Steering Behaviours
 	SteeringBehavior* m_pSteeringBehaviour = nullptr;
 
-	SteeringBehavior* m_pWander = nullptr;
 	SteeringBehavior* m_pSeek	= nullptr;
-	SteeringBehavior* m_pFlee	= nullptr;
 	SteeringBehavior* m_pRotate	= nullptr;
 
 	// Utilities
