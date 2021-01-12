@@ -27,13 +27,12 @@ On paper it's fairly easy, you might have even thought about it yourself. If you
 While doing some research about HSM's, i've seen a couple of different ways to implement them.
   - Using Enumerators
   - Inheritence
-  - Stack based
 
 
 
 
 
-Reference:
+**Reference:**
   - https://web.stanford.edu/class/cs123/lectures/CS123_lec08_HFSM_BT.pdf
   - https://barrgroup.com/embedded-systems/how-to/introduction-hierarchical-state-machines
   - http://www.yaldex.com/game-development/1592730043_ch45lev1sec3.html
