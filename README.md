@@ -24,7 +24,10 @@ On paper it's fairly easy, you might have even thought about it yourself. If you
 
 **How can we implement them**
 
-While doing some research about HSM's, i've seen a couple of different ways to implement them
+While doing some research about HSM's, i've seen a couple of different ways to implement them.
+  - Using Enumerators
+  - Inheritence
+  - Stack based
 
 
 
