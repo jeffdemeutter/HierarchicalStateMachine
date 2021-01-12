@@ -119,7 +119,7 @@ void Plugin::Initialize(IBaseInterface* pInterface, PluginInfo& info)
 	// Apply Transitions
 	pFSM->AddTransition(pWanderState	, pEnterHouse	, pHouseInFov		);
 
-	//		wander
+	//		to Wander
 	pFSM->AddTransition(pKillFollowers	, pWanderState	, pTimer			);
 	pFSM->AddTransition(pShoot			, pWanderState	, pNoEnemyInFov		);
 	pFSM->AddTransition(pShoot			, pWanderState	, pHasNoBullets		);
@@ -127,14 +127,17 @@ void Plugin::Initialize(IBaseInterface* pInterface, PluginInfo& info)
 	pFSM->AddTransition(pEvadeState		, pWanderState	, pTimer			);
 	pFSM->AddTransition(pEscapeHouse	, pWanderState	, pIsNotInHouse		);
 	pFSM->AddTransition(pReturnToMap	, pWanderState	, pInsideMap		);
+	pFSM->AddTransition(pEscapePurge	, pWanderState	, pNotInPurge		);
+	pFSM->AddTransition(pEat			, pWanderState	, pPlay1Frame		);
+	pFSM->AddTransition(pHeal			, pWanderState	, pPlay1Frame		);
 
 	//		pickup stuff
 	pFSM->AddTransition(pWanderState	, pPickupItem	, pItemInFov		);
 	pFSM->AddTransition(pEnterHouse		, pPickupItem	, pItemInFov		);
 	pFSM->AddTransition(pEscapeHouse	, pPickupItem	, pItemInFov		);
 	pFSM->AddTransition(pReturnToMap	, pPickupItem	, pItemInFov		);
-	pFSM->AddTransition(pPickupItem		, pEscapeHouse	, pPickedUpAll		);
 
+	pFSM->AddTransition(pPickupItem		, pEscapeHouse	, pPickedUpAll		);
 	pFSM->AddTransition(pEnterHouse		, pEscapeHouse	, pVisitedHouse		);
 	pFSM->AddTransition(pWanderState	, pEscapeHouse	, pIsInVisitedHouse	);
 
@@ -159,13 +162,10 @@ void Plugin::Initialize(IBaseInterface* pInterface, PluginInfo& info)
 	pFSM->AddTransition(pWanderState	, pEscapePurge	, pInPurgeZone		);
 	pFSM->AddTransition(pEnterHouse		, pEscapePurge	, pInPurgeZone		);
 	pFSM->AddTransition(pShootOrEvade	, pEscapePurge	, pInPurgeZone		);
-	pFSM->AddTransition(pEscapePurge	, pWanderState	, pNotInPurge		);
 
 	//		Using Utilities
 	pFSM->AddTransition(pWanderState	, pEat			, pHasToEat			);
-	pFSM->AddTransition(pEat			, pWanderState	, pPlay1Frame		);
 	pFSM->AddTransition(pWanderState	, pHeal			, pHasToHeal		);
-	pFSM->AddTransition(pHeal			, pWanderState	, pPlay1Frame		);
 
 
 
