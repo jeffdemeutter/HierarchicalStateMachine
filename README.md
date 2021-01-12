@@ -19,15 +19,12 @@ In a relatively small AI/Project, this might not really be a problem, but once y
 
 **How do we solve this?**
 
-On paper it's fairly easy, you might have even thought about it yourself. If you were to make a schematic on paper, you might have grouped up some states, and just drawn 1 transition towards it. Congratulations, this is basicly the same way a Hierarchical State Machine (HSM) works. In HSM's these groups are called superstates and they contain multiple states. You could even go a little bit further and make superstates inside of superstates. 
+On paper it's fairly easy, you might have even thought about it yourself. If you were to make a schematic on paper, you might have grouped up some states, and just drawn 1 transition towards it. Congratulations, this is basicly the same way a Hierarchical State Machine (HSM) works. In HSM's these groups are called superstates and they contain multiple states. You could even go a little bit further and make superstates inside of superstates. Using HSM's will greatly reduce the amount of transitions you need, making it easier to read and understand.
 
 
 **How can we implement them**
 
-While doing some research about HSM's, i've seen a couple of different ways to implement them.
-  - Using Enumerators
-  - Inheritence
-
+While doing some research about HSM's, i've found you could do this with inheritence. 
 
 
 
@@ -35,4 +32,4 @@ While doing some research about HSM's, i've seen a couple of different ways to i
 **Reference:**
   - https://web.stanford.edu/class/cs123/lectures/CS123_lec08_HFSM_BT.pdf
   - https://barrgroup.com/embedded-systems/how-to/introduction-hierarchical-state-machines
-  - http://www.yaldex.com/game-development/1592730043_ch45lev1sec3.html
+  - https://towardsdatascience.com/hierarchical-finite-state-machine-for-ai-acting-engine-9b24efc66f2
