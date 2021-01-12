@@ -1,6 +1,45 @@
 #include "stdafx.h"
 #include "States.h"
 
+#pragma region SuperState
+SuperState::SuperState(FSMState* startState, Blackboard* pBlackboard, bool alwaysUseStartState)
+	: FSMState()
+	, m_pFSM{ new FiniteStateMachine(startState, pBlackboard) }
+	, m_pEntryPoint{ startState }
+	, m_alwaysUseStartState{ alwaysUseStartState }
+{
+}
+
+SuperState::~SuperState()
+{
+	SAFE_DELETE(m_pFSM);
+}
+
+void SuperState::OnEnter(Blackboard* pBlackboard)
+{
+	if (m_alwaysUseStartState)
+		m_pFSM->ForceSetState(m_pEntryPoint);
+	else
+		m_pEntryPoint->OnEnter(pBlackboard);
+}
+
+void SuperState::OnExit(Blackboard* pBlackboard)
+{
+	m_pFSM->OnExit();
+}
+
+void SuperState::Update(Blackboard* pBlackboard, float deltaTime)
+{
+	if (m_pFSM)
+		m_pFSM->Update(deltaTime);
+}
+
+void SuperState::AddTransition(FSMState* startState, FSMState* toState, FSMTransition* transition)
+{
+	m_pFSM->AddTransition(startState, toState, transition);
+}
+#pragma endregion
+
 void WanderState::OnEnter(Blackboard* pBlackboard)
 {
 	SteeringAgent* pAgent = nullptr;
@@ -82,32 +121,6 @@ void EnterHouse::OnExit(Blackboard* pBlackboard)
 
 	if(pInterface->Agent_GetInfo().IsInHouse)
 		pAgent->SetHouseToVisited(house);
-}
-
-void EscapeHouse::OnEnter(Blackboard* pBlackboard)
-{
-	IExamInterface* pInterface = nullptr;
-	HouseInfo house{};
-	if (!pBlackboard->GetData("interface", pInterface)) return;
-	if (!pBlackboard->GetData("house", house)) return;
-
-	const float rot{ pInterface->Agent_GetInfo().Orientation - float(E_PI_2) };
-	const Vector2 forward{ GetNormalized(Vector2{cosf(rot), sinf(rot)}) };
-
-	// times 200.f just to make sure the target is outside the house
-	pBlackboard->ChangeData("target", house.Center + forward * 200.f);
-}
-
-void EscapeHouse::Update(Blackboard* pBlackboard, float deltaTime)
-{
-	SteeringAgent* pAgent = nullptr;
-	IExamInterface* pInterface = nullptr;
-	Vector2 target{};
-	if (!pBlackboard->GetData("agent", pAgent))	return;
-	if (!pBlackboard->GetData("interface", pInterface)) return;
-	if (!pBlackboard->GetData("target", target)) return;
-
-	pAgent->SetToSeek(pInterface->NavMesh_GetClosestPathPoint(target));
 }
 
 void PickUpItem::OnEnter(Blackboard* pBlackboard)
@@ -232,7 +245,7 @@ void PickUpItem::Update(Blackboard* pBlackboard, float deltaTime)
 				pInterface->Inventory_GetItem(3, food);
 			if (pInterface->Food_GetEnergy(pickedUpItem) > pInterface->Food_GetEnergy(food))
 			{
-				pInterface->Inventory_RemoveItem(3);
+				pInterface->Inventory_UseItem(3);
 				if (pInterface->Inventory_AddItem(3, pickedUpItem)) return;
 			}
 		}
@@ -248,7 +261,6 @@ void EvadeState::OnEnter(Blackboard* pBlackboard)
 	IExamInterface* pInterface = nullptr;
 	if (!pBlackboard->GetData("agent", pAgent)) return;
 	if (!pBlackboard->GetData("interface", pInterface)) return;
-	if (!pAgent || !pInterface) return;
 
 	// Get enemies in current vision
 	EntityInfo entityInfo;
@@ -296,13 +308,11 @@ void EvadeState::Update(Blackboard* pBlackboard, float deltaTime)
 	const Vector2 agentPos = pInterface->Agent_GetInfo().Position;
 	// calculate the three points to check if theyre safe
 	const Vector2 dPointMiddle = GetNormalized(pInterface->Agent_GetInfo().LinearVelocity) * pInterface->Agent_GetInfo().FOV_Range;
-	const Vector2 dPointLeft = Vector2{ dPointMiddle.x * cosf(-angle) - dPointMiddle.y * sinf(-angle)	, dPointMiddle.x * sinf(-angle) + dPointMiddle.y * cosf(-angle) };
-	const Vector2 dPointRight = Vector2{ dPointMiddle.x * cosf(angle) - dPointMiddle.y * sinf(angle)	, dPointMiddle.x * sinf(angle) + dPointMiddle.y * cosf(angle) };
+	const Vector2 dPointLeft = Vector2{ dPointMiddle.x * cos(-angle) - dPointMiddle.y * sin(-angle)	, dPointMiddle.x * sin(-angle) + dPointMiddle.y * cos(-angle) };
+	const Vector2 dPointRight = Vector2{ dPointMiddle.x * cos(angle) - dPointMiddle.y * sin(angle)	, dPointMiddle.x * sin(angle) + dPointMiddle.y * cos(angle) };
 
 	// check which is a safe route
-	bool isLeftSafe = true;
-	bool isMiddleSafe = true;
-	bool isRightSafe = true;
+	bool isLeftSafe = true, isMiddleSafe = true, isRightSafe = true;
 	for (auto& enemy : enemyVec)
 	{
 		if (isLeftSafe && DistanceSquared(enemy.Location, agentPos + dPointLeft) < distCheckSqr)
@@ -315,7 +325,7 @@ void EvadeState::Update(Blackboard* pBlackboard, float deltaTime)
 
 	Vector2 target{agentPos};
 	// times 5.f just to be sure since it uses a timer transition 
-	 if (isMiddleSafe)
+	if (isMiddleSafe)
 		target += dPointMiddle * 5.f;
 	else if (isLeftSafe)
 		target += dPointLeft * 5.f;
@@ -344,7 +354,7 @@ void KillFollowers::OnEnter(Blackboard* pBlackboard)
 	if (!pBlackboard->GetData("interface", pInterface)) return;
 
 	pAgent->SetToSeek(pInterface->NavMesh_GetClosestPathPoint(pInterface->Agent_GetInfo().Position + pInterface->Agent_GetInfo().LinearVelocity));
-
+	
 	pAgent->CanRun(true);
 }
 
@@ -458,12 +468,3 @@ void EscapePurge::Update(Blackboard* pBlackboard, float deltaTime)
 	pAgent->SetToSeek(pInterface->NavMesh_GetClosestPathPoint( target ));
 }
 
-void ShootOrEvade::OnEnter(Blackboard* pBlackboard)
-{
-	SteeringAgent* pAgent = nullptr;
-	if (!pBlackboard->GetData("agent", pAgent)) return;
-	pAgent->ResetTimer();
-
-	float timer = 1.5f;
-	pBlackboard->ChangeData("timer", timer);
-}

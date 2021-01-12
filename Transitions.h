@@ -39,6 +39,14 @@ public:
 	virtual bool ToTransition(Blackboard* pBlackboard) const override;
 };
 
+class NoEnemyFovTimer final : public FSMTransition
+{
+public:
+	virtual bool ToTransition(Blackboard* pBlackboard) const override;
+private:
+	const float m_Timer = 2.f;
+};
+
 class NoEnemyInFov final : public FSMTransition
 {
 public:

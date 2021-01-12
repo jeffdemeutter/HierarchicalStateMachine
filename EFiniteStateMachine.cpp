@@ -52,6 +52,12 @@ Blackboard* Elite::FiniteStateMachine::GetBlackboard() const
     return m_pBlackboard;
 }
 
+void Elite::FiniteStateMachine::ForceSetState(FSMState* pState)
+{
+    m_pCurrentState = pState;
+    m_pCurrentState->OnEnter(m_pBlackboard);
+}
+
 void Elite::FiniteStateMachine::SetState(FSMState* newState)
 {
     if (m_pCurrentState)

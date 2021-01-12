@@ -25,7 +25,6 @@ namespace Elite
 		virtual void OnEnter(Blackboard* pBlackboard) {};
 		virtual void OnExit(Blackboard* pBlackboard) {};
 		virtual void Update(Blackboard* pBlackboard, float deltaTime) {};
-
 	};
 
 	class FSMTransition
@@ -45,6 +44,9 @@ namespace Elite
 		void AddTransition(FSMState* startState, FSMState* toState, FSMTransition* transition);
 		void Update(float deltaTime);
 		Elite::Blackboard* GetBlackboard() const;
+
+		void OnExit() { m_pCurrentState->OnExit(m_pBlackboard); };
+		void ForceSetState(FSMState* pState);
 
 	private:
 		void SetState(FSMState* newState);

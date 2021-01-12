@@ -142,7 +142,34 @@ bool EnemyInFov::ToTransition(Blackboard* pBlackboard) const
 		pAgent->ResetTimer();
 		return true;
 	}
+
 	return false;
+}
+
+bool NoEnemyFovTimer::ToTransition(Blackboard* pBlackboard) const
+{
+	SteeringAgent* pAgent = nullptr;
+	IExamInterface* pInterface = nullptr;
+	if (!pBlackboard->GetData("agent", pAgent)) return false;
+	if (!pBlackboard->GetData("interface", pInterface)) return false;
+
+	// loop over the enemies inside the fov
+	EntityInfo entityInfo{};
+	for (int i = 0;; ++i)
+	{
+		// no (more) entities in fov
+		if (!pInterface->Fov_GetEntityByIndex(i, entityInfo))
+			break;
+
+		// if the entity is an enemy
+		if (entityInfo.Type == eEntityType::ENEMY)
+		{
+			pAgent->ResetTimer();
+			return false;
+		}	
+		continue;
+	}
+	return (pAgent->GetTimer() > m_Timer);
 }
 
 bool NoEnemyInFov::ToTransition(Blackboard* pBlackboard) const
@@ -161,10 +188,10 @@ bool NoEnemyInFov::ToTransition(Blackboard* pBlackboard) const
 		// if the entity is an enemy
 		if (entityInfo.Type == eEntityType::ENEMY)
 			return false;
-
+	
 		continue;
 	}
-
+	return true;
 }
 
 bool Timer::ToTransition(Blackboard* pBlackboard) const
@@ -262,7 +289,7 @@ bool CanKillEnemies::ToTransition(Blackboard* pBlackboard) const
 	// check for the second gun
 	if (pInterface->Inventory_GetItem(1, itemInfo))
 		bullets += pInterface->Weapon_GetAmmo(itemInfo);
-
+	
 	return (bullets != 0);
 }
 
@@ -330,3 +357,5 @@ bool CannotKill::ToTransition(Blackboard* pBlackboard) const
 
 	return (bullets == 0);
 }
+
+

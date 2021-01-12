@@ -11,6 +11,26 @@
 using namespace Elite;
 
 //------------------------------------------------
+// Super States
+//------------------------------------------------
+class SuperState : public FSMState
+{
+public:
+	SuperState(FSMState* startState, Blackboard* pBlackboard, bool alwaysUseStartState);
+	virtual ~SuperState();
+
+	virtual void OnEnter(Blackboard* pBlackboard) override;
+	virtual void OnExit(Blackboard* pBlackboard) override;
+	virtual void Update(Blackboard* pBlackboard, float deltaTime) override;
+	
+	void AddTransition(FSMState* startState, FSMState* toState, FSMTransition* transition);
+private:
+	FiniteStateMachine* m_pFSM = nullptr;
+	FSMState* m_pEntryPoint = nullptr;
+	bool m_alwaysUseStartState = true;
+};
+
+//------------------------------------------------
 // States
 //------------------------------------------------
 class WanderState final : public FSMState
@@ -43,14 +63,6 @@ public:
 	EnterHouse() : FSMState() {}
 	virtual void OnEnter(Blackboard* pBlackboard) override;
 	virtual void OnExit(Blackboard* pBlackboard) override;
-	virtual void Update(Blackboard* pBlackboard, float deltaTime) override;
-};
-
-class EscapeHouse final : public FSMState
-{
-public:
-	EscapeHouse() : FSMState() {}
-	virtual void OnEnter(Blackboard* pBlackboard) override;
 	virtual void Update(Blackboard* pBlackboard, float deltaTime) override;
 };
 
@@ -104,5 +116,4 @@ class ShootOrEvade final : public FSMState
 {
 public:
 	ShootOrEvade() : FSMState() {}
-	virtual void OnEnter(Blackboard* pBlackboard) override;
 };
