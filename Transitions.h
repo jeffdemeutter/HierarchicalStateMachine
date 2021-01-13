@@ -39,12 +39,12 @@ public:
 	virtual bool ToTransition(Blackboard* pBlackboard) const override;
 };
 
-class NoEnemyFovTimer final : public FSMTransition
+class NoEnemyTimer final : public FSMTransition
 {
 public:
 	virtual bool ToTransition(Blackboard* pBlackboard) const override;
 private:
-	const float m_Timer = 1.5f;
+	const float m_Timer = 1.f;
 };
 
 class NoEnemyInFov final : public FSMTransition

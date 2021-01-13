@@ -155,7 +155,7 @@ bool EnemyInFov::ToTransition(Blackboard* pBlackboard) const
 	return false;
 }
 
-bool NoEnemyFovTimer::ToTransition(Blackboard* pBlackboard) const
+bool NoEnemyTimer::ToTransition(Blackboard* pBlackboard) const
 {
 	SteeringAgent* pAgent = nullptr;
 	IExamInterface* pInterface = nullptr;
@@ -253,7 +253,7 @@ bool WasHit::ToTransition(Blackboard* pBlackboard) const
 
 	if (pInterface->Agent_GetInfo().WasBitten)
 	{
-		pBlackboard->ChangeData("timer", 1.2f);
+		pBlackboard->ChangeData("timer", 5.f);
 		pAgent->ResetTimer();
 
 		return true;

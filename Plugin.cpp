@@ -86,6 +86,7 @@ void Plugin::Initialize(IBaseInterface* pInterface, PluginInfo& info)
 	OutsideMap*			pOutsideMap			= new OutsideMap();
 	InsideMap*			pInsideMap			= new InsideMap();
 	EnemyInFov*			pEnemyInFov			= new EnemyInFov();
+	NoEnemyTimer*		pNoEnemyTimer		= new NoEnemyTimer();
 	NoEnemyInFov*		pNoEnemyInFov		= new NoEnemyInFov();
 	Play1Frame*			pPlay1Frame			= new Play1Frame();
 	HasToEat*			pHasToEat			= new HasToEat();
@@ -95,6 +96,7 @@ void Plugin::Initialize(IBaseInterface* pInterface, PluginInfo& info)
 	InPurgeZone*		pInPurgeZone		= new InPurgeZone();
 	NotInPurge*			pNotInPurge			= new NotInPurge();
 	CannotKill*			pCannotKill			= new CannotKill();
+	Timer*				pTimer				= new Timer();
 
 	m_pTransitions.push_back(pHouseInFov);
 	m_pTransitions.push_back(pItemInFov);
@@ -129,6 +131,8 @@ void Plugin::Initialize(IBaseInterface* pInterface, PluginInfo& info)
 		pGather->AddTransition(pReturnToMap	, pPickupItem	, pItemInFov	);
 		// EnterHouse -> PickupItem
 		pGather->AddTransition(pEnterHouse	, pPickupItem	, pItemInFov	);
+		// ReturnToMap -> EnterHouse
+		pGather->AddTransition(pReturnToMap	, pEnterHouse	, pHouseInFov	);
 
 		// ShootOrEvade -> EvadeState
 		pCombat->AddTransition(pShootOrEvade	, pEvadeState	, pCannotKill	);
@@ -136,14 +140,16 @@ void Plugin::Initialize(IBaseInterface* pInterface, PluginInfo& info)
 		pCombat->AddTransition(pShootOrEvade	, pShoot		, pCanKill		);
 		// Shoot -> EvadeState
 		pCombat->AddTransition(pShoot			, pEvadeState	, pCannotKill	);
+		pCombat->AddTransition(pShoot			, pEvadeState	, pNoEnemyInFov	);
 
 		// Gather <-> Combat
 		pDefault->AddTransition(pGather			, pCombat		, pEnemyInFov	);
-		pDefault->AddTransition(pCombat			, pGather		, pNoEnemyInFov	);
-		// Gather -> KillFollowers -> combat
+		pDefault->AddTransition(pCombat			, pGather		, pNoEnemyTimer	);
+		// Gather <-> KillFollowers
 		pDefault->AddTransition(pGather			, pKillFollowers, pWasHit		);
+		pDefault->AddTransition(pKillFollowers	, pGather		, pTimer		);
+		// KillFollowers -> combat
 		pDefault->AddTransition(pKillFollowers	, pCombat		, pEnemyInFov	);
-
 	// ===================================================================
 	// FSM
 	FiniteStateMachine* pFSM = new FiniteStateMachine(pDefault, pBlackboard);
@@ -161,7 +167,7 @@ void Plugin::Initialize(IBaseInterface* pInterface, PluginInfo& info)
 	m_pSteeringAgent->SetDecisionMaking(pFSM);
 	// makes sure the agent doesnt sprint from the start, since some onEnter states get triggered when making a FSM
 	m_pSteeringAgent->CanRun(false);
-}
+} 
 
 //Called only once
 void Plugin::DllInit()
@@ -197,24 +203,6 @@ void Plugin::Update(float dt)
 //This function calculates the new SteeringOutput, called once per frame
 SteeringPlugin_Output Plugin::UpdateSteering(float dt)
 {
-	//Use the Interface (IAssignmentInterface) to 'interface' with the AI_Framework
-	//auto agentInfo = m_pInterface->Agent_GetInfo();
-
-	//auto nextTargetPos = m_Target; //To start you can use the mouse position as guidance
-
-	//auto vHousesInFOV = GetHousesInFOV();//uses m_pInterface->Fov_GetHouseByIndex(...)
-	//auto vEntitiesInFOV = GetEntitiesInFOV(); //uses m_pInterface->Fov_GetEntityByIndex(...)
-
-	//for (auto& e : vEntitiesInFOV)
-	//{
-	//	if (e.Type == eEntityType::PURGEZONE)
-	//	{
-	//		PurgeZoneInfo zoneInfo;
-	//		m_pInterface->PurgeZone_GetInfo(e, zoneInfo);
-	//		std::cout << "Purge Zone in FOV:" << e.Location.x << ", "<< e.Location.y <<  " ---EntityHash: " << e.EntityHash << "---Radius: "<< zoneInfo.Radius << std::endl;
-	//	}
-	//}
-
 	return m_pSteeringAgent->Update(dt, m_pInterface->Agent_GetInfo());
 }
 

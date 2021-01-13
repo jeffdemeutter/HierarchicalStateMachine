@@ -50,27 +50,35 @@ void WanderState::OnEnter(Blackboard* pBlackboard)
 	pBlackboard->GetData("target", target);
 	if (!pAgent || !pInterface) return;
 
-	if (DistanceSquared(pInterface->Agent_GetInfo().Position, target) < 30.f * 30.f)
+	if (DistanceSquared(pInterface->Agent_GetInfo().Position, target) < 20.f * 20.f)
 	{
 		const Vector2 worldDim = pInterface->World_GetInfo().Dimensions;
-		
-		Vector2 newTarget{}, navTarget{};
-		do
+		Vector2 newTarget = { randomFloat(worldDim.x), randomFloat(worldDim.y) };
+		newTarget -= worldDim / 2;
+		// gets a random point outside of the house he currently is in
+		if (pInterface->Agent_GetInfo().IsInHouse)
 		{
-			newTarget = { randomFloat(worldDim.x * 2), randomFloat(worldDim.y * 2) };
-			newTarget -= worldDim;
-			newTarget.x = Elite::Clamp(newTarget.x, -worldDim.x, worldDim.x);
-			newTarget.y = Elite::Clamp(newTarget.y, -worldDim.y, worldDim.y);
+			newTarget = { pInterface->Agent_GetInfo().Position + pInterface->Agent_GetInfo().LinearVelocity * 5.f };
+			pBlackboard->ChangeData("target", pInterface->NavMesh_GetClosestPathPoint(newTarget));
+			pAgent->SetToSeek(pInterface->NavMesh_GetClosestPathPoint(newTarget));
+		}
 
+		// code to find house 
+		Vector2 navTarget = {};
+		for (int i = 0;; ++i)
+		{
+			newTarget = { randomFloat(worldDim.x), randomFloat(worldDim.y) };
+			newTarget -= worldDim / 2;
 			navTarget = pInterface->NavMesh_GetClosestPathPoint(newTarget);
 
-			// check if navtarget is far enough
-			if (DistanceSquared(pInterface->Agent_GetInfo().Position, target) < 50.f * 50.f)
-				continue;
-		} while (navTarget == newTarget);
+			if (newTarget != navTarget)
+				break;
 
-		pBlackboard->ChangeData("target", navTarget);
-		pAgent->SetToSeek(navTarget);
+			continue;
+		}
+
+		pBlackboard->ChangeData("target", pInterface->NavMesh_GetClosestPathPoint(newTarget));
+		pAgent->SetToSeek(pInterface->NavMesh_GetClosestPathPoint(newTarget));
 	}
 }
 
@@ -361,6 +369,7 @@ void EvadeState::Update(Blackboard* pBlackboard, float deltaTime)
 	else
 		target -= dPointMiddle * 5.f;
 
+	pBlackboard->ChangeData("target", target);
 	pAgent->SetToSeek(pInterface->NavMesh_GetClosestPathPoint(target));
 }
 
@@ -494,6 +503,7 @@ void EscapePurge::Update(Blackboard* pBlackboard, float deltaTime)
 	// times 3.f to make sure it is far enough
 	const Vector2 target = (pInterface->Agent_GetInfo().Position - purgeZone.Center);
 
+	pBlackboard->ChangeData("target", target);
 	pAgent->SetToSeek(pInterface->NavMesh_GetClosestPathPoint( target ));
 }
 
