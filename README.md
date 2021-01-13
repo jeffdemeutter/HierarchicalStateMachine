@@ -32,7 +32,7 @@ I chose to implement the second one, since this is easier to implement. If I wer
 
 So while researching and seeing diagrams of HSM's, simply said it's just an FSM in an FSM. So once you have an FSM (which we did) it's pretty simple to implement. So we just make a new state as usual, which inherits from the BaseState (In this case FSMState) and call this new state the SuperState. This SuperState contains a 
 
-
+ 
 
 
 **Reference:**
