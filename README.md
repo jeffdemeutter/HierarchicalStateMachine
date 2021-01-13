@@ -16,7 +16,7 @@ On paper it's fairly easy, you even might have thought about it already. If you 
 ## How can we implement them
 
 While doing some research about HSM's, I've found 2 ways of doing it:
-- using unheritence
+- using inheritence
 - making a seperate FSM in a state
 
 I chose to implement the second one, since this is easier and more managable to implement. If I were to implement the first one, I would have to rewrite the whole FSM we already had. Also rewriting it so it would work with inheritence means it'll be dirtier code and less readable afterwards. 
