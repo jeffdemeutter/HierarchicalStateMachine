@@ -367,6 +367,7 @@ bool NotInPurge::ToTransition(Blackboard* pBlackboard) const
 		// no (more) entities in fov
 		if (!pInterface->Fov_GetEntityByIndex(i, entityInfo))
 			return true;
+		
 
 		// if the entity is an enemy
 		if (entityInfo.Type == eEntityType::PURGEZONE)

@@ -488,6 +488,8 @@ void EscapePurge::OnExit(Blackboard* pBlackboard)
 	SteeringAgent* pAgent = nullptr;
 	if (!pBlackboard->GetData("agent", pAgent)) return;
 
+
+
 	pAgent->CanRun(false);
 }
 

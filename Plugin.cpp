@@ -138,9 +138,10 @@ void Plugin::Initialize(IBaseInterface* pInterface, PluginInfo& info)
 		pCombat->AddTransition(pShootOrEvade	, pEvadeState	, pCannotKill	);
 		// ShootOrEvade -> Shoot
 		pCombat->AddTransition(pShootOrEvade	, pShoot		, pCanKill		);
-		// Shoot -> EvadeState
+		// Shoot <-> EvadeState
 		pCombat->AddTransition(pShoot			, pEvadeState	, pCannotKill	);
 		pCombat->AddTransition(pShoot			, pEvadeState	, pNoEnemyInFov	);
+		pCombat->AddTransition(pEvadeState		, pShoot		, pCanKill		);
 
 		// Gather <-> Combat
 		pDefault->AddTransition(pGather			, pCombat		, pEnemyInFov	);
