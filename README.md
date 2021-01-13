@@ -79,7 +79,7 @@ void Elite::FiniteStateMachine::ForceSetState(FSMState* pState)
 ```
 
 ### Result
-Now we are able to create a SuperState, or even inherit from it and make a new SuperState Class with certain member variables.
+Now we are able to create a SuperState, or even inherit from it and make a new SuperState Class with certain member variables to add in extra functionality if you'd like. 
 
 ### Reference:
   - https://web.stanford.edu/class/cs123/lectures/CS123_lec08_HFSM_BT.pdf
