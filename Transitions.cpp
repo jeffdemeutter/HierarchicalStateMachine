@@ -17,6 +17,7 @@ bool HouseInFov::ToTransition(Blackboard* pBlackboard) const
 		pBlackboard->ChangeData("house", houseInfo);
 		return true;
 	}
+	return false;
 }
 
 bool ItemInFov::ToTransition(Blackboard* pBlackboard) const
@@ -36,6 +37,14 @@ bool ItemInFov::ToTransition(Blackboard* pBlackboard) const
 		// if entity is not an item go to next entity
 		if (entityInfo.Type != eEntityType::ITEM)
 			continue;
+
+		ItemInfo itemInfo{};
+		pInterface->Item_GetInfo(entityInfo, itemInfo);
+		if (itemInfo.Type == eItemType::GARBAGE)
+			continue;
+		if (itemInfo.Type == eItemType::MEDKIT)
+			if (pInterface->Inventory_GetItem(2, itemInfo))
+				continue;
 
 		vEntities.push_back(entityInfo);
 		pBlackboard->ChangeData("vItems", vEntities);
@@ -183,7 +192,7 @@ bool NoEnemyInFov::ToTransition(Blackboard* pBlackboard) const
 	{
 		// no (more) entities in fov
 		if (!pInterface->Fov_GetEntityByIndex(i, entityInfo))
-			return true;
+			break;
 
 		// if the entity is an enemy
 		if (entityInfo.Type == eEntityType::ENEMY)
@@ -212,7 +221,13 @@ bool HasToEat::ToTransition(Blackboard* pBlackboard) const
 	ItemInfo itemInfo{};
 	if (pInterface->Inventory_GetItem(3, itemInfo))
 		if (10.f - pInterface->Agent_GetInfo().Energy > pInterface->Food_GetEnergy(itemInfo))
-			return true;
+			if(pBlackboard->ChangeData("eatslot", 3))
+				return true;
+
+	if (pInterface->Inventory_GetItem(4, itemInfo))
+		if (10.f - pInterface->Agent_GetInfo().Energy > pInterface->Food_GetEnergy(itemInfo))
+			if (pBlackboard->ChangeData("eatslot", 4))
+				return true;
 
 	return false;
 } 
@@ -276,7 +291,7 @@ bool HasNoBullets::ToTransition(Blackboard* pBlackboard) const
 	return (bullets == 0);
 }
 
-bool CanKillEnemies::ToTransition(Blackboard* pBlackboard) const
+bool CanKill::ToTransition(Blackboard* pBlackboard) const
 {
 	IExamInterface* pInterface = nullptr;
 	if (!pBlackboard->GetData("interface", pInterface)) return false;
@@ -289,8 +304,27 @@ bool CanKillEnemies::ToTransition(Blackboard* pBlackboard) const
 	// check for the second gun
 	if (pInterface->Inventory_GetItem(1, itemInfo))
 		bullets += pInterface->Weapon_GetAmmo(itemInfo);
-	
-	return (bullets != 0);
+
+	if (bullets == 0)
+		return false;
+
+	EntityInfo entityInfo;
+	for (int i = 0;; ++i)
+	{
+		// if no entity is found, break
+		if (!pInterface->Fov_GetEntityByIndex(i, entityInfo))
+			break;
+
+		// if entity is not an enemy go to next entity
+		if (entityInfo.Type != eEntityType::ENEMY)
+			continue;
+
+		EnemyInfo enemyInfo{};
+		pInterface->Enemy_GetInfo(entityInfo, enemyInfo);
+
+		return true;
+	}
+	return false;
 }
 
 bool InPurgeZone::ToTransition(Blackboard* pBlackboard) const
@@ -317,6 +351,7 @@ bool InPurgeZone::ToTransition(Blackboard* pBlackboard) const
 		pBlackboard->ChangeData("purge", PurgeZoneInfo);
 		return true;
 	}
+	return false;
 }
 
 bool NotInPurge::ToTransition(Blackboard* pBlackboard) const

@@ -22,6 +22,8 @@ void Plugin::Initialize(IBaseInterface* pInterface, PluginInfo& info)
 	// initialize
 	m_pSteeringAgent = new SteeringAgent();
 
+	srand(time(NULL));
+
 	// ===================================================================
 	// decisionmaking init
 	Blackboard* pBlackboard = new Blackboard();
@@ -36,6 +38,7 @@ void Plugin::Initialize(IBaseInterface* pInterface, PluginInfo& info)
 	pBlackboard->AddData("purge"	, PurgeZoneInfo{});
 	pBlackboard->AddData("timer"	, static_cast<float>(0.f));
 	pBlackboard->AddData("kills"	, static_cast<int>(0));
+	pBlackboard->AddData("eatslot"	, static_cast<int>(0));
 	pBlackboard->AddData("distance"	, 5.f);
 
 	// ===================================================================
@@ -69,7 +72,7 @@ void Plugin::Initialize(IBaseInterface* pInterface, PluginInfo& info)
 	m_pStates.push_back(pShoot);
 	m_pStates.push_back(pShootOrEvade);
 	m_pStates.push_back(pEscapePurge);
-
+	
 	m_pStates.push_back(pGather);
 	m_pStates.push_back(pCombat);
 	m_pStates.push_back(pDefault);
@@ -83,16 +86,12 @@ void Plugin::Initialize(IBaseInterface* pInterface, PluginInfo& info)
 	OutsideMap*			pOutsideMap			= new OutsideMap();
 	InsideMap*			pInsideMap			= new InsideMap();
 	EnemyInFov*			pEnemyInFov			= new EnemyInFov();
-	NoEnemyFovTimer*	pNoEnemyFovTimer	= new NoEnemyFovTimer();
 	NoEnemyInFov*		pNoEnemyInFov		= new NoEnemyInFov();
-	Timer*				pTimer				= new Timer();
-	Timer*				pTimerSOE			= new Timer();
 	Play1Frame*			pPlay1Frame			= new Play1Frame();
 	HasToEat*			pHasToEat			= new HasToEat();
 	WasHit*				pWasHit				= new WasHit();
 	HasToHeal*			pHasToHeal			= new HasToHeal();
-	HasNoBullets*		pHasNoBullets		= new HasNoBullets();
-	CanKillEnemies*		pCanKillEnemies		= new CanKillEnemies();
+	CanKill*			pCanKill			= new CanKill();
 	InPurgeZone*		pInPurgeZone		= new InPurgeZone();
 	NotInPurge*			pNotInPurge			= new NotInPurge();
 	CannotKill*			pCannotKill			= new CannotKill();
@@ -104,15 +103,12 @@ void Plugin::Initialize(IBaseInterface* pInterface, PluginInfo& info)
 	m_pTransitions.push_back(pOutsideMap);
 	m_pTransitions.push_back(pInsideMap);
 	m_pTransitions.push_back(pEnemyInFov);
-	m_pTransitions.push_back(pNoEnemyFovTimer);
 	m_pTransitions.push_back(pNoEnemyInFov);
-	m_pTransitions.push_back(pTimer);
 	m_pTransitions.push_back(pPlay1Frame);
 	m_pTransitions.push_back(pHasToEat);
 	m_pTransitions.push_back(pWasHit);
 	m_pTransitions.push_back(pHasToHeal);
-	m_pTransitions.push_back(pHasNoBullets);
-	m_pTransitions.push_back(pCanKillEnemies);
+	m_pTransitions.push_back(pCanKill);
 	m_pTransitions.push_back(pInPurgeZone);
 	m_pTransitions.push_back(pNotInPurge);
 	m_pTransitions.push_back(pCannotKill);
@@ -121,108 +117,50 @@ void Plugin::Initialize(IBaseInterface* pInterface, PluginInfo& info)
 	// ===================================================================
 	// Super State Init
 		// Wander <-> ReturnToMap
-		pGather->AddTransition(pWanderState	, pReturnToMap	, pOutsideMap		);
-		pGather->AddTransition(pReturnToMap	, pWanderState	, pInsideMap		);
-		// ReturnToMap -> PickupItem
-		pGather->AddTransition(pReturnToMap	, pPickupItem	, pItemInFov		);
+		pGather->AddTransition(pWanderState	, pReturnToMap	, pOutsideMap	);
+		pGather->AddTransition(pReturnToMap	, pWanderState	, pInsideMap	);
 		// Wander <-> PickupItem
-		pGather->AddTransition(pPickupItem	, pWanderState	, pPickedUpAll		);
-		pGather->AddTransition(pWanderState	, pPickupItem	, pItemInFov		);
+		pGather->AddTransition(pPickupItem	, pWanderState	, pPickedUpAll	);
+		pGather->AddTransition(pWanderState, pPickupItem	, pItemInFov	);
 		// Wander <-> EnterHouse
-		pGather->AddTransition(pWanderState	, pEnterHouse	, pHouseInFov		);
-		pGather->AddTransition(pEnterHouse	, pWanderState	, pItemInFov		);
-		pGather->AddTransition(pEnterHouse	, pWanderState	, pVisitedHouse		);
-
+		pGather->AddTransition(pWanderState	, pEnterHouse	, pHouseInFov	);
+		pGather->AddTransition(pEnterHouse	, pWanderState	, pVisitedHouse	);
+		// ReturnToMap -> PickupItem
+		pGather->AddTransition(pReturnToMap	, pPickupItem	, pItemInFov	);
+		// EnterHouse -> PickupItem
+		pGather->AddTransition(pEnterHouse	, pPickupItem	, pItemInFov	);
 
 		// ShootOrEvade -> EvadeState
-		pCombat->AddTransition(pShootOrEvade, pEvadeState	, pCannotKill		);
-		// Shoot -> EvadeState
-		pCombat->AddTransition(pShoot		, pEvadeState	, pCannotKill		);
-		pCombat->AddTransition(pShoot		, pShootOrEvade	, pNoEnemyInFov		);
+		pCombat->AddTransition(pShootOrEvade	, pEvadeState	, pCannotKill	);
 		// ShootOrEvade -> Shoot
-		pCombat->AddTransition(pShootOrEvade, pShoot		, pCanKillEnemies	);
+		pCombat->AddTransition(pShootOrEvade	, pShoot		, pCanKill		);
+		// Shoot -> EvadeState
+		pCombat->AddTransition(pShoot			, pEvadeState	, pCannotKill	);
 
-
-		//// Gather <-> Combat
-		//pDefault->AddTransition(pCombat		, pGather		, pNoEnemyInFov);
-		//pDefault->AddTransition(pGather		, pCombat		, pEnemyInFov);
-
+		// Gather <-> Combat
+		pDefault->AddTransition(pGather			, pCombat		, pEnemyInFov	);
+		pDefault->AddTransition(pCombat			, pGather		, pNoEnemyInFov	);
+		// Gather -> KillFollowers -> combat
+		pDefault->AddTransition(pGather			, pKillFollowers, pWasHit		);
+		pDefault->AddTransition(pKillFollowers	, pCombat		, pEnemyInFov	);
 
 	// ===================================================================
 	// FSM
-	FiniteStateMachine* pFSM = new FiniteStateMachine(pGather, pBlackboard);
-		// Gather <-> Combat
-		pFSM->AddTransition(pCombat			, pGather		, pNoEnemyInFov	);
-		pFSM->AddTransition(pGather			, pCombat		, pEnemyInFov	);
-		// Gather -> KillFollowers -> Combat
-		pFSM->AddTransition(pGather			, pKillFollowers, pWasHit		);
-		pFSM->AddTransition(pKillFollowers	, pCombat		, pEnemyInFov	);
-		// Gather <-> EscapePurge
-		pFSM->AddTransition(pGather			, pEscapePurge	, pInPurgeZone	);
-		pFSM->AddTransition(pEscapePurge	, pGather		, pNotInPurge	);
-		// Combat -> EscapePurge
-		pFSM->AddTransition(pCombat			, pEscapePurge	, pInPurgeZone	);
-
+	FiniteStateMachine* pFSM = new FiniteStateMachine(pDefault, pBlackboard);
+		
+		// Default <-> EscapePurge
+		pFSM->AddTransition(pDefault	, pEscapePurge	, pInPurgeZone	);
+		pFSM->AddTransition(pEscapePurge, pDefault		, pNotInPurge	);
+		// Default <-> Eat
+		pFSM->AddTransition(pDefault	, pEat			, pHasToEat		);
+		pFSM->AddTransition(pEat		, pDefault		, pPlay1Frame	);
+		// Default <-> Heal
+		pFSM->AddTransition(pDefault	, pHeal			, pHasToHeal	);
+		pFSM->AddTransition(pHeal		, pDefault		, pPlay1Frame	);
 
 	m_pSteeringAgent->SetDecisionMaking(pFSM);
-
-	//FiniteStateMachine* pFSM = new FiniteStateMachine(pWanderState, pBlackboard);
-
-
-	// Apply Transitions
-	//pFSM->AddTransition(pWanderState	, pEnterHouse	, pHouseInFov		);
-
-	////		to Wander
-	//pFSM->AddTransition(pKillFollowers	, pWanderState	, pTimer			);
-	//									  
-	//pFSM->AddTransition(pShoot			, pWanderState	, pNoEnemyInFov		);
-	//pFSM->AddTransition(pShootOrEvade	, pWanderState	, pTimerSOE			);
-	//pFSM->AddTransition(pEvadeState		, pWanderState	, pTimer			);
-	//									  
-	//pFSM->AddTransition(pReturnToMap	, pWanderState	, pInsideMap		);
-	//pFSM->AddTransition(pEscapePurge	, pWanderState	, pNotInPurge		);
-	//pFSM->AddTransition(pEnterHouse		, pWanderState	, pVisitedHouse		);
-	//pFSM->AddTransition(pPickupItem		, pWanderState	, pPickedUpAll		);
-
-
-
-	////		pickup stuff
-	//pFSM->AddTransition(pWanderState	, pPickupItem	, pItemInFov		);
-	//pFSM->AddTransition(pReturnToMap	, pPickupItem	, pItemInFov		);
-	//pFSM->AddTransition(pEnterHouse		, pPickupItem	, pItemInFov		);
-
-	//pFSM->AddTransition(pWanderState	, pReturnToMap	, pOutsideMap		);
-
-	////		choose from evade or kill
-	//pFSM->AddTransition(pWanderState	, pShootOrEvade	, pEnemyInFov		);
-	//pFSM->AddTransition(pReturnToMap	, pShootOrEvade	, pEnemyInFov		);
-	//pFSM->AddTransition(pPickupItem		, pShootOrEvade	, pEnemyInFov		);
-	//pFSM->AddTransition(pKillFollowers	, pShootOrEvade	, pEnemyInFov		);
-
-	//pFSM->AddTransition(pWanderState	, pKillFollowers, pWasHit			);
-	//pFSM->AddTransition(pReturnToMap	, pKillFollowers, pWasHit			);
-	////		shoot
-	//pFSM->AddTransition(pShootOrEvade	, pShoot		, pCanKillEnemies	);
-	////		evade
-	//pFSM->AddTransition(pShootOrEvade	, pEvadeState	, pCannotKill		);
-	//
-	////		purge zone stuff
-	//pFSM->AddTransition(pWanderState	, pEscapePurge	, pInPurgeZone		);
-	//pFSM->AddTransition(pReturnToMap	, pEscapePurge	, pInPurgeZone		);
-	//pFSM->AddTransition(pEnterHouse		, pEscapePurge	, pInPurgeZone		);
-	//pFSM->AddTransition(pShootOrEvade	, pEscapePurge	, pInPurgeZone		);
-
-	////		Using Utilities
-	//pFSM->AddTransition(pWanderState	, pEat			, pHasToEat			);
-	//pFSM->AddTransition(pWanderState	, pHeal			, pHasToHeal		);
-
-	//pFSM->AddTransition(pEat			, pWanderState	, pPlay1Frame		);
-	//pFSM->AddTransition(pHeal			, pWanderState	, pPlay1Frame		);
-
-
-
-	// set fsm
-	//m_pSteeringAgent->SetDecisionMaking(pFSM);
+	// makes sure the agent doesnt sprint from the start, since some onEnter states get triggered when making a FSM
+	m_pSteeringAgent->CanRun(false);
 }
 
 //Called only once

@@ -44,7 +44,7 @@ class NoEnemyFovTimer final : public FSMTransition
 public:
 	virtual bool ToTransition(Blackboard* pBlackboard) const override;
 private:
-	const float m_Timer = 2.f;
+	const float m_Timer = 1.5f;
 };
 
 class NoEnemyInFov final : public FSMTransition
@@ -119,7 +119,7 @@ public:
 	virtual bool ToTransition(Blackboard* pBlackboard) const override;
 };
 
-class CanKillEnemies final : public FSMTransition
+class CanKill final : public FSMTransition
 {
 public:
 	virtual bool ToTransition(Blackboard* pBlackboard) const override;

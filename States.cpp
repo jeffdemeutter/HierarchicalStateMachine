@@ -44,18 +44,34 @@ void WanderState::OnEnter(Blackboard* pBlackboard)
 {
 	SteeringAgent* pAgent = nullptr;
 	IExamInterface* pInterface = nullptr;
+	Vector2 target{};
 	if (!pBlackboard->GetData("agent", pAgent)) return;
 	if (!pBlackboard->GetData("interface", pInterface)) return;
+	pBlackboard->GetData("target", target);
 	if (!pAgent || !pInterface) return;
 
-	const Vector2 worldDim = pInterface->World_GetInfo().Dimensions;
+	if (DistanceSquared(pInterface->Agent_GetInfo().Position, target) < 30.f * 30.f)
+	{
+		const Vector2 worldDim = pInterface->World_GetInfo().Dimensions;
+		
+		Vector2 newTarget{}, navTarget{};
+		do
+		{
+			newTarget = { randomFloat(worldDim.x * 2), randomFloat(worldDim.y * 2) };
+			newTarget -= worldDim;
+			newTarget.x = Elite::Clamp(newTarget.x, -worldDim.x, worldDim.x);
+			newTarget.y = Elite::Clamp(newTarget.y, -worldDim.y, worldDim.y);
 
-	Vector2 target{ randomFloat(worldDim.x * 2), randomFloat(worldDim.y * 2) };
-	target -= worldDim;
+			navTarget = pInterface->NavMesh_GetClosestPathPoint(newTarget);
 
-	pBlackboard->ChangeData("target", target);
+			// check if navtarget is far enough
+			if (DistanceSquared(pInterface->Agent_GetInfo().Position, target) < 50.f * 50.f)
+				continue;
+		} while (navTarget == newTarget);
 
-	pAgent->SetToSeek(pInterface->NavMesh_GetClosestPathPoint(target));
+		pBlackboard->ChangeData("target", navTarget);
+		pAgent->SetToSeek(navTarget);
+	}
 }
 
 void WanderState::Update(Blackboard* pBlackboard, float deltaTime)
@@ -68,7 +84,9 @@ void WanderState::Update(Blackboard* pBlackboard, float deltaTime)
 	if (!pBlackboard->GetData("target", target)) return;
 	if (!pAgent || !pInterface) return;
 
-	if (abs(DistanceSquared(target, pInterface->Agent_GetInfo().Position)) < 10.f)
+	pInterface->Draw_Segment(pInterface->Agent_GetInfo().Position, target, { 1.f, 0.f, 0.f });
+
+	if (abs(DistanceSquared(target, pInterface->Agent_GetInfo().Position)) < 15.f)
 		OnEnter(pBlackboard);
 
 	pAgent->SetToSeek(pInterface->NavMesh_GetClosestPathPoint(target));
@@ -166,6 +184,14 @@ void PickUpItem::Update(Blackboard* pBlackboard, float deltaTime)
 		if (entityInfo.Type != eEntityType::ITEM)
 			continue;
 
+		ItemInfo itemInfo{};
+		pInterface->Item_GetInfo(entityInfo, itemInfo);
+		if (itemInfo.Type == eItemType::GARBAGE)
+			continue;
+		if (itemInfo.Type == eItemType::MEDKIT)
+			if (pInterface->Inventory_GetItem(2, itemInfo))
+				continue;
+
 		// checks if that item is already in the deque
 		auto found = std::find_if(vEntities.begin(), vEntities.end(), [&entityInfo](const auto& e) {
 				return entityInfo.EntityHash == e.EntityHash;
@@ -218,16 +244,9 @@ void PickUpItem::Update(Blackboard* pBlackboard, float deltaTime)
 			if (newPistolAmmo > weaponAmmo1 || newPistolAmmo > weaponAmmo2)
 			{
 				// switch lowest ammo first
-				if (weaponAmmo1 < weaponAmmo2)
-				{
-					pInterface->Inventory_RemoveItem(0);
-					if (pInterface->Inventory_AddItem(0, pickedUpItem)) return;
-				}
-				else
-				{
-					pInterface->Inventory_RemoveItem(1);
-					if (pInterface->Inventory_AddItem(1, pickedUpItem)) return;
-				}
+				const int idx { weaponAmmo1 < weaponAmmo2 ? 0 : 1 };
+				pInterface->Inventory_RemoveItem(idx);
+				if (pInterface->Inventory_AddItem(idx, pickedUpItem)) return;			
 			}
 		}
 		// checks if the item is a medkit
@@ -239,19 +258,27 @@ void PickUpItem::Update(Blackboard* pBlackboard, float deltaTime)
 		else if (eItemType::FOOD == pickedUpItem.Type)
 		{
 			if (pInterface->Inventory_AddItem(3, pickedUpItem)) return;
+			if (pInterface->Inventory_AddItem(4, pickedUpItem)) return;
 
-			// get food energy amt
+			const int newFoodVal{ pInterface->Food_GetEnergy(pickedUpItem) };
 			ItemInfo food{};
-				pInterface->Inventory_GetItem(3, food);
-			if (pInterface->Food_GetEnergy(pickedUpItem) > pInterface->Food_GetEnergy(food))
+			// food 1 ammo (no need for an if statement since we alrady return if there are no pistols in the slots yet)
+			pInterface->Inventory_GetItem(3, food);
+			const int foodVal1 = pInterface->Food_GetEnergy(food);
+			// food 2 ammo
+			pInterface->Inventory_GetItem(4, food);
+			const int foodVal2 = pInterface->Food_GetEnergy(food);
+
+			// checks if found pistol has more ammo then the current ones
+			if (newFoodVal > foodVal1 || newFoodVal > foodVal2)
 			{
-				pInterface->Inventory_UseItem(3);
-				if (pInterface->Inventory_AddItem(3, pickedUpItem)) return;
+				// switch lowest ammo first
+				const int idx{ foodVal1 < foodVal2 ? 3 : 4 };
+				pInterface->Inventory_UseItem(idx);
+				pInterface->Inventory_RemoveItem(idx);
+				if (pInterface->Inventory_AddItem(idx, pickedUpItem)) return;
 			}
 		}
-
-		pInterface->Inventory_AddItem(4, pickedUpItem);
-		pInterface->Inventory_RemoveItem(4);
 	}
 }
 
@@ -340,10 +367,12 @@ void EvadeState::Update(Blackboard* pBlackboard, float deltaTime)
 void Eat::OnEnter(Blackboard* pBlackboard)
 {
 	IExamInterface* pInterface = nullptr;
+	int slot{};
 	if (!pBlackboard->GetData("interface", pInterface)) return;
+	pBlackboard->GetData("eatslot", slot);
 
-	pInterface->Inventory_UseItem(3);
-	pInterface->Inventory_RemoveItem(3);
+	pInterface->Inventory_UseItem(slot);
+	pInterface->Inventory_RemoveItem(slot);
 }
 
 void KillFollowers::OnEnter(Blackboard* pBlackboard)
@@ -353,9 +382,9 @@ void KillFollowers::OnEnter(Blackboard* pBlackboard)
 	if (!pBlackboard->GetData("agent", pAgent)) return;
 	if (!pBlackboard->GetData("interface", pInterface)) return;
 
-	pAgent->SetToSeek(pInterface->NavMesh_GetClosestPathPoint(pInterface->Agent_GetInfo().Position + pInterface->Agent_GetInfo().LinearVelocity));
-	
 	pAgent->CanRun(true);
+
+	pAgent->SetToSeek(pInterface->NavMesh_GetClosestPathPoint(pInterface->Agent_GetInfo().Position + pInterface->Agent_GetInfo().LinearVelocity));
 }
 
 void KillFollowers::OnExit(Blackboard* pBlackboard)
