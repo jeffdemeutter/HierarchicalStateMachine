@@ -1,5 +1,4 @@
 #include <functional>
-#include <iostream>
 
 template <typename T>
 class StateMachine
@@ -13,11 +12,11 @@ class StateMachine
 
     struct StateContext
     {
-        std::function<void()> onStart;
-        std::function<void()> onUpdate;
-        std::function<void()> onStop;
+        std::function<void()> onStart = []{};
+        std::function<void()> onUpdate = []{};
+        std::function<void()> onStop = []{};
 
-        std::vector<TransitionContext> transitions;
+        std::vector<TransitionContext> transitions{};
     };
     
 public:
@@ -36,6 +35,8 @@ public:
 private:
     std::unordered_map<T, StateContext> mStateContexts;
     T mCurrentState;
+
+    void SwitchToState(const TransitionContext& stateContext);
 };
 
 
@@ -67,16 +68,25 @@ StateMachine<T>& StateMachine<T>::AddTransition(T from, T to, std::function<bool
 template <typename T>
 void StateMachine<T>::Update()
 {
-    for (const auto& t : mStateContexts[mCurrentState].transitions)
+    for (const auto& stateContext : mStateContexts[mCurrentState].transitions)
     {
-        if (mCurrentState == t.to)
+        if (mCurrentState == stateContext.to)
             continue;
 
-        if (!t.condition())
+        if (!stateContext.condition())
             continue;
 
-        mCurrentState = t.to;
-
-        std::cout << "CurrentState is " << (int)mCurrentState << '\n';
+        SwitchToState(stateContext);
+        return;
     }   
+
+    mStateContexts[mCurrentState].onUpdate();
+}
+
+template <typename T>
+void StateMachine<T>::SwitchToState(const TransitionContext& stateContext)
+{
+    mStateContexts[mCurrentState].onStop();
+    mCurrentState = stateContext.to;
+    mStateContexts[mCurrentState].onStart();
 }
