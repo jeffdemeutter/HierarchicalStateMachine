@@ -3,7 +3,7 @@
 template <typename T>
 class StateMachine
 {
-    static_assert(std::is_enum<T>::value,"Type provided in StateMachine was not an Enum");
+    static_assert(std::is_enum_v<T>,"Type provided in StateMachine was not an Enum");
     struct TransitionContext
     {
         T to;
