@@ -42,6 +42,7 @@ private:
     T mCurrentState;
 
     void SwitchToState(const TransitionContext& stateContext);
+    bool TransitionExists(const T& to, const std::vector<TransitionContext>& transitions);
 };
 
 
@@ -86,9 +87,13 @@ StateMachine<T>& StateMachine<T>::AddStateContext(T state, std::function<void()>
 template <EnumType T>
 StateMachine<T>& StateMachine<T>::AddTransition(T from, T to, std::function<bool()> condition)
 {
-    if (from != to)
-        mStateContexts[from].transitions.emplace_back(TransitionContext{to, condition});
+    if (from == to)
+        return *this;
     
+    if (TransitionExists(to, mStateContexts[from].transitions))
+        return *this;
+    
+    mStateContexts[from].transitions.emplace_back(TransitionContext{to, condition});
     return *this;
 }
 
@@ -116,4 +121,14 @@ void StateMachine<T>::SwitchToState(const TransitionContext& stateContext)
     mStateContexts[mCurrentState].onStop();
     mCurrentState = stateContext.to;
     mStateContexts[mCurrentState].onStart();
+}
+
+template <EnumType T>
+bool StateMachine<T>::TransitionExists(const T& to, const std::vector<TransitionContext>& transitions)
+{
+    for (const auto& transition : transitions)
+        if (transition.to == to)
+            return true;
+
+    return false;
 }
