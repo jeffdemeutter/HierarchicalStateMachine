@@ -29,6 +29,9 @@ public:
     StateMachine& operator=(const StateMachine&) = delete;
     StateMachine& operator=(StateMachine&&) noexcept  = delete;
 
+    StateMachine& AddOnStart(T state, std::function<void()> onStart);
+    StateMachine& AddOnUpdate(T state, std::function<void()> onUpdate);
+    StateMachine& AddOnStop(T state, std::function<void()> onStop);
     StateMachine& AddStateContext(T state, std::function<void()> onStart, std::function<void()> onUpdate, std::function<void()> onStop);
     StateMachine& AddTransition(T from, T to, std::function<bool()> condition);
 
@@ -51,10 +54,32 @@ StateMachine<T>::StateMachine(T startState)
 }
 
 template <EnumType T>
+StateMachine<T>& StateMachine<T>::AddOnStart(T state, std::function<void()> onStart)
+{
+    mStateContexts[state].onStart = onStart;
+    return *this;
+}
+
+template <EnumType T>
+StateMachine<T>& StateMachine<T>::AddOnUpdate(T state, std::function<void()> onUpdate)
+{
+    mStateContexts[state].onUpdate = onUpdate;    
+    return *this;
+}
+
+template <EnumType T>
+StateMachine<T>& StateMachine<T>::AddOnStop(T state, std::function<void()> onStop)
+{
+    mStateContexts[state].onStop = onStop;    
+    return *this;
+}
+
+template <EnumType T>
 StateMachine<T>& StateMachine<T>::AddStateContext(T state, std::function<void()> onStart, std::function<void()> onUpdate, std::function<void()> onStop)
 {
-    mStateContexts[state] = StateContext(onStart, onUpdate, onStop);
-
+    AddOnStart(state, onStart);
+    AddOnUpdate(state, onUpdate);
+    AddOnStop(state, onStop);
     return *this;
 }
 
