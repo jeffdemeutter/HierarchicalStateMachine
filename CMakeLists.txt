@@ -1,10 +1,10 @@
 cmake_minimum_required(VERSION 3.20.x)
 
-project(example)
+project(StateMachine LANGUAGES CXX VERSION 0.0.1 DESCRIPTION "Simple header-only state machine")
 
-add_executable(${PROJECT_NAME} main.cpp)
+add_subdirectory("include")
 
-target_link_libraries(${PROJECT_NAME} INTERFACE
-    StateMachine    
-)
-set_property(TARGET ${PROJECT_NAME} PROPERTY CXX_STANDARD 23)
+option(UseExamples "Wether to compile the examples aswell" ON)
+if(UseExamples)
+    add_subdirectory("examples")
+endif(UseExamples)

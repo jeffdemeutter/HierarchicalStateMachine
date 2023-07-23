@@ -13,4 +13,4 @@ This is a header-only state machine written in C++, focusing on simplicity and u
 ## To-Do
 - ~~make headeronly~~
 - add proper example(s)
-- adjust cmakelist for including in other projects
+- ~~adjust cmakelist for including in other projects~~

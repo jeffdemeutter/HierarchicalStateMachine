@@ -2,7 +2,7 @@
 #include <Windows.h>
 #include <thread>
 
-#include"include/StateMachine.h"
+#include"../include/StateMachine.h"
 #include "State.h"
 
 int main(int argc, char const *argv[])
