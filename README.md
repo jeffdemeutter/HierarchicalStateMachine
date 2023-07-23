@@ -1,7 +1,7 @@
 # State Machine
 
 ## Deprecated info
-This was a school assignment where we were given a basic state machine that used inheritence and had to extend it. I chose to extend it by making it a hierarchical state machine. 
+This used to be a school assignment where we were given a basic state machine that used inheritence and had to extend it's functionality. I chose to extend it by making it a hierarchical state machine. 
 
 Whilst I was working with this code I realized it was really annoying and a lot of work to create new states. This is why I deprecated it and started working on a simple to use state machine.
 
