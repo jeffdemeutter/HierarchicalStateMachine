@@ -4,7 +4,7 @@ project(StateMachine LANGUAGES CXX VERSION 0.0.1 DESCRIPTION "Simple header-only
 
 add_subdirectory("include")
 
-option(UseExamples "Wether to compile the examples aswell" ON)
+option(UseExamples "Wether to compile the examples" OFF)
 if(UseExamples)
     add_subdirectory("examples")
 endif(UseExamples)
