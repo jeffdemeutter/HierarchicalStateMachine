@@ -36,6 +36,7 @@ public:
     StateMachine& AddTransition(T from, T to, std::function<bool()> condition);
 
     void Update();
+    T GetCurrentState() const { return mCurrentState; }
 
 private:
     std::unordered_map<T, StateContext> mStateContexts;
