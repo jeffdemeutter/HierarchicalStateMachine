@@ -8,9 +8,10 @@ Whilst I was working with this code I realized it was really annoying and a lot 
 ## Project
 This is a header-only state machine written in C++, focusing on simplicity and usability. Currently the state machine header file depends on the stl library. I chose to avoid inheritence with this small project as a challange and also to avoid any vtables. 
 
-
+## how to use
 
 ## To-Do
 - ~~make headeronly~~
 - add proper example(s)
+- add how-to-use section
 - ~~adjust cmakelist for including in other projects~~
