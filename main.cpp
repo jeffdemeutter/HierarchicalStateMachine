@@ -2,9 +2,8 @@
 #include <Windows.h>
 #include <thread>
 
-#include "StateMachine.h"
+#include"include/StateMachine.h"
 #include "State.h"
-
 
 int main(int argc, char const *argv[])
 { 
