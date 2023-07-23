@@ -12,7 +12,7 @@ This is a header-only state machine written in C++, focusing on simplicity and u
 
 ## To-Do
 - ~~make headeronly~~
-- add proper example(s)
+- ~~add proper example(s)~~
 - add how-to-use section
 - ~~adjust cmakelist for including in other projects~~
 - maybe put it in a namespace???
