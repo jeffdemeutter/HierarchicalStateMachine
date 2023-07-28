@@ -1,9 +1,8 @@
 #include <functional>
 
-template <typename E>
-concept EnumType = std::is_enum_v<E>;
 
-template <EnumType T>
+template <typename T>
+requires std::is_enum_v<T>
 class StateMachine
 {
     struct TransitionContext
@@ -49,34 +48,39 @@ private:
 
 
 
-template <EnumType T> 
+template <typename T>
+requires std::is_enum_v<T>
 StateMachine<T>::StateMachine(T startState)
     : mCurrentState(startState)
 {
 }
 
-template <EnumType T>
+template <typename T>
+requires std::is_enum_v<T>
 StateMachine<T>& StateMachine<T>::AddOnStart(T state, std::function<void()> onStart)
 {
     mStateContexts[state].onStart = onStart;
     return *this;
 }
 
-template <EnumType T>
+template <typename T>
+requires std::is_enum_v<T>
 StateMachine<T>& StateMachine<T>::AddOnUpdate(T state, std::function<void()> onUpdate)
 {
     mStateContexts[state].onUpdate = onUpdate;    
     return *this;
 }
 
-template <EnumType T>
+template <typename T>
+requires std::is_enum_v<T>
 StateMachine<T>& StateMachine<T>::AddOnStop(T state, std::function<void()> onStop)
 {
     mStateContexts[state].onStop = onStop;    
     return *this;
 }
 
-template <EnumType T>
+template <typename T>
+requires std::is_enum_v<T>
 StateMachine<T>& StateMachine<T>::AddStateContext(T state, std::function<void()> onStart, std::function<void()> onUpdate, std::function<void()> onStop)
 {
     AddOnStart(state, onStart);
@@ -85,7 +89,8 @@ StateMachine<T>& StateMachine<T>::AddStateContext(T state, std::function<void()>
     return *this;
 }
 
-template <EnumType T>
+template <typename T>
+requires std::is_enum_v<T>
 StateMachine<T>& StateMachine<T>::AddTransition(T from, T to, std::function<bool()> condition)
 {
     if (from == to)
@@ -98,7 +103,8 @@ StateMachine<T>& StateMachine<T>::AddTransition(T from, T to, std::function<bool
     return *this;
 }
 
-template <EnumType T>
+template <typename T>
+requires std::is_enum_v<T>
 void StateMachine<T>::Update()
 {
     for (const auto& stateContext : mStateContexts[mCurrentState].transitions)
@@ -116,7 +122,8 @@ void StateMachine<T>::Update()
     mStateContexts[mCurrentState].onUpdate();
 }
 
-template <EnumType T>
+template <typename T>
+requires std::is_enum_v<T>
 void StateMachine<T>::SwitchToState(const TransitionContext& stateContext)
 {
     mStateContexts[mCurrentState].onStop();
@@ -124,7 +131,8 @@ void StateMachine<T>::SwitchToState(const TransitionContext& stateContext)
     mStateContexts[mCurrentState].onStart();
 }
 
-template <EnumType T>
+template <typename T>
+requires std::is_enum_v<T>
 bool StateMachine<T>::TransitionExists(const T& to, const std::vector<TransitionContext>& transitions)
 {
     for (const auto& transition : transitions)
