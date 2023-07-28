@@ -1,0 +1,26 @@
+{
+    "C_Cpp.formatting": "disabled",
+    "C_Cpp.intelliSenseEngine": "disabled",
+    "clangd.path": "C:/Program Files/LLVM/bin/clangd.exe",
+    "clangd.arguments": [
+        "-log=verbose",
+        "-pretty",
+        "--background-index",
+        "--compile-commands-dir=${workspaceFolder}/build",
+        "--completion-style=detailed",
+        "--header-insertion=iwyu",
+        "--header-insertion-decorators",
+        "--inlay-hints",
+        "--function-arg-placeholders",
+        "--background-index",
+        "--clang-tidy",
+        "--clang-tidy-checks=cppcoreguidelines-*,performance-*,bugprone-*,portability-*,modernize-*,llvm-*",
+        "--pch-storage=memory",
+    ],
+    "cmake.configureOnOpen": true,
+    "cmake.generator": "Ninja",
+    "cmake.configureSettings": {
+        "CMAKE_EXPORT_COMPILE_COMMANDS": 1
+    },
+    "window.zoomLevel": -1
+}

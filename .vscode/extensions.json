@@ -1,0 +1,9 @@
+{
+    "recommendations": [
+        "twxs.cmake",
+        "ms-vscode.cmake-tool",
+        "llvm-vs-code-extensions.vscode-clangd",
+        "josetr.cmake-language-support-vscode",
+        "vadimcn.vscode-lldb"
+    ]
+}
