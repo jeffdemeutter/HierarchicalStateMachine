@@ -3,7 +3,7 @@
 ## Project
 This is a header-only state machine written in C++, focusing on simplicity and usability. Currently the state machine header file depends on the stl library. I chose to avoid inheritence with this small project as a challange and also to avoid any vtables. 
 
-## how to use
+## How to use
 
 
 ## Deprecated branch

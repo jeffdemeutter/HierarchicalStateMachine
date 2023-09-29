@@ -13,7 +13,7 @@
         "--function-arg-placeholders",
         "--background-index",
         "--clang-tidy",
-        "--clang-tidy-checks=cppcoreguidelines-*,performance-*,bugprone-*,portability-*,modernize-*,llvm-*",
+        "--clang-tidy-checks=cppcoreguidelines-*,performance-*,bugprone-*,portability-*,modernize-*",
         "--pch-storage=memory",
     ],
     "cmake.configureOnOpen": true,
